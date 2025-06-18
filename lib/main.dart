@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart'; // Importa la función para inicializar localización
 import 'package:barrilfood_app/providers/auth_provider.dart';
+import 'package:barrilfood_app/providers/user_provider.dart'; // 👈 --- IMPORT USER_PROVIDER HERE ---
 import 'package:barrilfood_app/screens/auth/login_screen.dart';
 import 'package:barrilfood_app/screens/auth/splash_screen.dart';
 import 'package:barrilfood_app/screens/client/client_home_screen.dart';
@@ -18,6 +19,7 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => UserProvider()), // 👈 --- ADD USER_PROVIDER HERE ---
         ChangeNotifierProvider(create: (_) => EmployeeProvider()),
       ],
       child: const MyApp(),
@@ -56,7 +58,8 @@ class MyApp extends StatelessWidget {
           switch (authProvider.userRole) {
             case 1: // Administrador
               return const AdminHomeScreen();
-            case 2: // Empleado
+            case 2: // Empleados
+              return const EmployeeHomeScreen();
             case 3: // Repartidor
               return const EmployeeHomeScreen();
             case 4: // Cliente

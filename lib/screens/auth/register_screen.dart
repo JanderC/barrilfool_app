@@ -54,7 +54,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final success = await Provider.of<AuthProvider>(context, listen: false)
           .registerCustomer(userData);
 
-      if (!success && mounted) {
+      if (success && mounted) {
+        // Mostrar mensaje de éxito
+        _showSuccessDialog();
+      } else if (mounted) {
         setState(() {
           _errorMessage = 'Error al registrar usuario. Intenta de nuevo.';
         });
@@ -74,11 +77,132 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          icon: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.green.shade50,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.check_circle,
+              color: Colors.green.shade600,
+              size: 48,
+            ),
+          ),
+          title: const Text(
+            '¡Registro Exitoso!',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Color(0xFFFF8C00),
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Tu cuenta ha sido creada exitosamente.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF8C00).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(60),
+                ),
+                child: const Icon(
+                  Icons.restaurant_menu,
+                  size: 60,
+                  color: Color(0xFFFF8C00),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '¡Bienvenido a BarrilFood!',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[800],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop(); // Cerrar dialog
+                  _navigateAfterRegistration();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF8C00),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text(
+                  'CONTINUAR',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _navigateAfterRegistration() {
+    if (mounted) {
+      // Verificar si el usuario se autenticó automáticamente después del registro
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      
+      if (authProvider.isAuthenticated) {
+        // Si está autenticado, el Consumer del main.dart se encargará de navegar
+        // Solo necesitamos cerrar todas las pantallas de auth
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      } else {
+        // Si no se autenticó automáticamente, regresar al login
+        Navigator.of(context).popUntil((route) => route.isFirst);
+        
+        // Mostrar mensaje de confirmación
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('¡Registro exitoso! Ahora puedes iniciar sesión.'),
+            backgroundColor: Color(0xFFFF8C00),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Registro'),
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFFFF8C00),
+        elevation: 0,
       ),
       body: SafeArea(
         child: Center(
@@ -90,6 +214,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // Logo/Icono de la app en lugar de imagen externa
+                  Container(
+                    width: 80,
+                    height: 80,
+                    margin: const EdgeInsets.only(bottom: 24),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF8C00).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(40),
+                    ),
+                    child: const Icon(
+                      Icons.restaurant,
+                      size: 40,
+                      color: Color(0xFFFF8C00),
+                    ),
+                  ),
+                  
                   const Text(
                     'Crea tu cuenta',
                     textAlign: TextAlign.center,
@@ -118,11 +258,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       decoration: BoxDecoration(
                         color: Colors.red.shade50,
                         borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red.shade200),
                       ),
-                      child: Text(
-                        _errorMessage,
-                        style: TextStyle(color: Colors.red.shade800),
-                        textAlign: TextAlign.center,
+                      child: Row(
+                        children: [
+                          Icon(Icons.error_outline, color: Colors.red.shade600, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _errorMessage,
+                              style: TextStyle(color: Colors.red.shade800),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   if (_errorMessage.isNotEmpty) const SizedBox(height: 16),
@@ -130,10 +278,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   // Nombre
                   TextFormField(
                     controller: _nombreController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Nombre',
-                      prefixIcon: Icon(Icons.person),
-                      border: OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.person, color: Color(0xFFFF8C00)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFFFF8C00)),
+                      ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -147,10 +301,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   // Apellido
                   TextFormField(
                     controller: _apellidoController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Apellido',
-                      prefixIcon: Icon(Icons.person),
-                      border: OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.person_outline, color: Color(0xFFFF8C00)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFFFF8C00)),
+                      ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -165,10 +325,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Correo electrónico',
-                      prefixIcon: Icon(Icons.email),
-                      border: OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.email, color: Color(0xFFFF8C00)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFFFF8C00)),
+                      ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -186,10 +352,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   TextFormField(
                     controller: _telefonoController,
                     keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Teléfono',
-                      prefixIcon: Icon(Icons.phone),
-                      border: OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.phone, color: Color(0xFFFF8C00)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFFFF8C00)),
+                      ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -204,10 +376,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   TextFormField(
                     controller: _passwordController,
                     obscureText: true,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Contraseña',
-                      prefixIcon: Icon(Icons.lock),
-                      border: OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.lock, color: Color(0xFFFF8C00)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFFFF8C00)),
+                      ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -225,10 +403,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   TextFormField(
                     controller: _confirmPasswordController,
                     obscureText: true,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Confirmar contraseña',
-                      prefixIcon: Icon(Icons.lock),
-                      border: OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFFFF8C00)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFFFF8C00)),
+                      ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -249,6 +433,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       backgroundColor: const Color(0xFFFF8C00),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       textStyle: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
