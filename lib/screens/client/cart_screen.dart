@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
@@ -229,9 +230,7 @@ class CartScreen extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  // Procesar el pago
-                },
+                onPressed: () => _openWhatsApp(context, cartItems, total),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFFF8C00),
                   foregroundColor: Colors.white,
@@ -248,5 +247,66 @@ class CartScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  // Función para abrir WhatsApp con el mensaje del pedido
+  Future<void> _openWhatsApp(BuildContext context, List<Map<String, dynamic>> cartItems, double total) async {
+    const String phoneNumber = '584160467960'; // Número con código de país (58 para Venezuela)
+    
+    // Construir el mensaje con los detalles del pedido
+    String message = '¡Hola! Me gustaría realizar el siguiente pedido:\n\n';
+    message += '📋 *DETALLES DEL PEDIDO:*\n';
+    
+    for (var item in cartItems) {
+      message += '• ${item['nombre']}\n';
+      message += '  Cantidad: ${item['cantidad']}\n';
+      message += '  Precio unitario: \$${(item['precio'] as double).toStringAsFixed(2)}\n';
+      message += '  Subtotal: \$${((item['precio'] as double) * (item['cantidad'] as int)).toStringAsFixed(2)}\n\n';
+    }
+    
+    message += '💰 *RESUMEN DE COSTOS:*\n';
+    double subtotal = 0;
+    for (var item in cartItems) {
+      subtotal += (item['precio'] as double) * (item['cantidad'] as int);
+    }
+    message += 'Subtotal: \$${subtotal.toStringAsFixed(2)}\n';
+    message += 'Envío: \$2.50\n';
+    message += 'Impuestos: \$0.00\n';
+    message += '*TOTAL A PAGAR: \$${total.toStringAsFixed(2)}*\n\n';
+    message += '¿Pueden confirmar la disponibilidad y procesar mi pedido? ¡Gracias!';
+    
+    // Codificar el mensaje para URL
+    final String encodedMessage = Uri.encodeComponent(message);
+    
+    // Crear la URL de WhatsApp
+    final String whatsappUrl = 'https://wa.me/$phoneNumber?text=$encodedMessage';
+    
+    try {
+      // Intentar abrir WhatsApp
+      final Uri uri = Uri.parse(whatsappUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        // Si no se puede abrir WhatsApp, mostrar un error
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No se pudo abrir WhatsApp. Por favor, instala la aplicación.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      // Manejar errores
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al abrir WhatsApp: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }
