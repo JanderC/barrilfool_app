@@ -1,29 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class CartScreen extends StatelessWidget {
+class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
 
   @override
+  State<CartScreen> createState() => _CartScreenState();
+}
+
+class _CartScreenState extends State<CartScreen> {
+  // Datos de ejemplo para el carrito - ahora como variable de estado
+  List<Map<String, dynamic>> cartItems = [
+    {
+      'id': 1,
+      'nombre': 'Hamburguesa Clásica',
+      'precio': 8.99,
+      'cantidad': 2,
+      'imagen': 'assets/hamburguesa_clasica.jpg',
+    },
+    {
+      'id': 3,
+      'nombre': 'Alitas BBQ',
+      'precio': 9.99,
+      'cantidad': 1,
+      'imagen': 'assets/alitas_bbq.jpg',
+    },
+  ];
+
+  @override
   Widget build(BuildContext context) {
-    // Datos de ejemplo para el carrito
-    final cartItems = [
-      {
-        'id': 1,
-        'nombre': 'Hamburguesa Clásica',
-        'precio': 8.99,
-        'cantidad': 2,
-        'imagen': 'assets/hamburguesa_clasica.jpg',
-      },
-      {
-        'id': 3,
-        'nombre': 'Alitas BBQ',
-        'precio': 9.99,
-        'cantidad': 1,
-        'imagen': 'assets/alitas_bbq.jpg',
-      },
-    ];
-    
     // Calcular subtotal
     double subtotal = 0;
     for (var item in cartItems) {
@@ -130,33 +135,20 @@ class CartScreen extends StatelessWidget {
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Subtotal: \$${((item['precio'] as double) * (item['cantidad'] as int)).toStringAsFixed(2)}',
+                                        style: TextStyle(
+                                          color: Colors.grey.shade600,
+                                          fontSize: 12,
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),
                                 
                                 // Controles de cantidad
-                                Row(
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.remove_circle_outline),
-                                      onPressed: () {
-                                        // Disminuir cantidad
-                                      },
-                                    ),
-                                    Text(
-                                      '${item['cantidad']}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.add_circle_outline),
-                                      onPressed: () {
-                                        // Aumentar cantidad
-                                      },
-                                    ),
-                                  ],
-                                ),
+                                _buildCartItemCounter(index, item['cantidad'] as int),
                               ],
                             ),
                           ),
@@ -247,6 +239,82 @@ class CartScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  // Widget del contador para items del carrito
+  Widget _buildCartItemCounter(int itemIndex, int quantity) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFFF8C00), width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(
+              Icons.remove,
+              color: Color(0xFFFF8C00),
+              size: 18,
+            ),
+            onPressed: () => _updateCartItemQuantity(itemIndex, quantity - 1),
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            padding: EdgeInsets.zero,
+          ),
+          Container(
+            constraints: const BoxConstraints(minWidth: 25),
+            child: Text(
+              '$quantity',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: Color(0xFFFF8C00),
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(
+              Icons.add,
+              color: Color(0xFFFF8C00),
+              size: 18,
+            ),
+            onPressed: () => _updateCartItemQuantity(itemIndex, quantity + 1),
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            padding: EdgeInsets.zero,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Método para actualizar la cantidad de un item del carrito
+  void _updateCartItemQuantity(int itemIndex, int newQuantity) {
+    setState(() {
+      if (newQuantity <= 0) {
+        // Eliminar el item del carrito si la cantidad es 0
+        cartItems.removeAt(itemIndex);
+      } else {
+        // Actualizar la cantidad
+        cartItems[itemIndex]['cantidad'] = newQuantity;
+      }
+    });
+    
+    // Aquí puedes llamar tu servicio cuando esté implementado
+    // Por ejemplo: _cartService.updateItemQuantity(cartItems[itemIndex]['id'], newQuantity);
+    final productId = itemIndex < cartItems.length ? cartItems[itemIndex]['id'] : 'eliminado';
+    print('Item del carrito - Producto ID: $productId, Nueva cantidad: $newQuantity');
+    
+    // Mostrar mensaje cuando se elimina un producto
+    if (newQuantity <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Producto eliminado del carrito'),
+          duration: Duration(seconds: 2),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
   }
 
   // Función para abrir WhatsApp con el mensaje del pedido

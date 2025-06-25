@@ -3,13 +3,14 @@ import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart'; // Importa la función para inicializar localización
 import 'package:barrilfood_app/providers/auth_provider.dart';
 import 'package:barrilfood_app/providers/user_provider.dart'; // 👈 --- IMPORT USER_PROVIDER HERE ---
+import 'package:barrilfood_app/providers/product_provider.dart';
+import 'package:barrilfood_app/providers/category_provider.dart'; // 👈 --- IMPORT CATEGORY_PROVIDER HERE ---
 import 'package:barrilfood_app/screens/auth/login_screen.dart';
 import 'package:barrilfood_app/screens/auth/splash_screen.dart';
 import 'package:barrilfood_app/screens/client/client_home_screen.dart';
 import 'package:barrilfood_app/screens/admin/admin_home_screen.dart';
 import 'package:barrilfood_app/screens/employee/employee_home_screen.dart';
 import 'package:barrilfood_app/providers/employee_provider.dart';
-
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Asegura la inicialización de Flutter
@@ -21,6 +22,8 @@ void main() async {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => UserProvider()), // 👈 --- ADD USER_PROVIDER HERE ---
         ChangeNotifierProvider(create: (_) => EmployeeProvider()),
+        ChangeNotifierProvider(create: (_) => ProductProvider()),
+        ChangeNotifierProvider(create: (_) => CategoryProvider()), // 👈 --- ADD CATEGORY_PROVIDER HERE ---
       ],
       child: const MyApp(),
     ),

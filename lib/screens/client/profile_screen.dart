@@ -85,15 +85,6 @@ class ProfileScreen extends StatelessWidget {
           
           _buildSection(
             context,
-            title: 'Métodos de Pago',
-            icon: Icons.payment,
-            onTap: () {
-              // Navegar a la pantalla de métodos de pago
-            },
-          ),
-          
-          _buildSection(
-            context,
             title: 'Notificaciones',
             icon: Icons.notifications,
             onTap: () {
