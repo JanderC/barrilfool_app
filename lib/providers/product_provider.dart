@@ -105,7 +105,6 @@ class ProductProvider with ChangeNotifier {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
     try {
       final updatedProduct = await _productApi.updateProduct(productId, productData, token);
       final index = _products.indexWhere((product) => product.id == productId);

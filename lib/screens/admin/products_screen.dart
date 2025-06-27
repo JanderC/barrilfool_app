@@ -1,3 +1,4 @@
+import 'package:barrilfood_app/providers/auth_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'create_product_screen.dart';
@@ -954,9 +955,9 @@ class _ProductsScreenState extends State<ProductsScreen>
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const CreateProductScreen(),
-        // TODO: Pasar el producto como argumento para editarlo
-        // builder: (context) => CreateProductScreen(product: product),
+        // Descomenta esta línea y comenta la otra
+        builder: (context) => CreateProductScreen(product: product),
+        // builder: (context) => const CreateProductScreen(),
       ),
     );
 
@@ -986,11 +987,12 @@ class _ProductsScreenState extends State<ProductsScreen>
     );
 
     // TODO: Obtener el token del usuario autenticado
-    const token = '';
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    String? token = authProvider.token;
 
     final success = await productProvider.toggleProductAvailability(
       productId,
-      token,
+      token ?? '',
     );
 
     if (success && mounted) {

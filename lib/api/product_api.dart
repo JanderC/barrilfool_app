@@ -16,7 +16,7 @@ class ProductApi {
   }) async {
     String url = '$baseUrl/api/products';
     List<String> queryParams = [];
-    
+
     if (categoryId != null) {
       queryParams.add('category_id=$categoryId');
     }
@@ -26,7 +26,7 @@ class ProductApi {
     if (destacado != null) {
       queryParams.add('destacado=$destacado');
     }
-    
+
     if (queryParams.isNotEmpty) {
       url += '?${queryParams.join('&')}';
     }
@@ -62,7 +62,10 @@ class ProductApi {
   }
 
   // Crear un nuevo producto
-  Future<Product> createProduct(Map<String, dynamic> productData, String token) async {
+  Future<Product> createProduct(
+    Map<String, dynamic> productData,
+    String token,
+  ) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/products'),
       headers: {
@@ -82,19 +85,45 @@ class ProductApi {
   }
 
   // Actualizar un producto existente
-  Future<Product> updateProduct(int productId, Map<String, dynamic> productData, String token) async {
-    final response = await http.put(
-      Uri.parse('$baseUrl/api/products/$productId'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: json.encode(productData),
-    );
+  Future<Product> updateProduct(
+    int productId,
+    Map<String, dynamic> productData,
+    String token,
+  ) async {
+    late http.Response response; // Declarar response fuera del if/else
+
+    // Verificar si se está desactivando el producto
+    if (productData['disponible'] == false) {
+      response = await http.put(
+        Uri.parse('$baseUrl/api/products/$productId/deactivate'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+    } else if (productData['disponible'] == true) {
+      response = await http.put(
+        Uri.parse('$baseUrl/api/products/$productId/activate'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+    } else {
+      // Si no es activar/desactivar, usar endpoint general de actualización
+      response = await http.put(
+        Uri.parse('$baseUrl/api/products/$productId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode(productData),
+      );
+    }
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      return Product.fromJson(data);
+      return Product.fromJson(data['producto']);
     } else if (response.statusCode == 404) {
       throw Exception('Producto no encontrado');
     } else {
@@ -124,7 +153,11 @@ class ProductApi {
   }
 
   // Actualizar solo la imagen de un producto
-  Future<Product> updateProductImage(int productId, String imageBase64, String token) async {
+  Future<Product> updateProductImage(
+    int productId,
+    String imageBase64,
+    String token,
+  ) async {
     final response = await http.put(
       Uri.parse('$baseUrl/api/products/$productId/image'),
       headers: {
@@ -201,7 +234,11 @@ class ProductApi {
   }
 
   // Añadir una opción a un producto
-  Future<ProductOption> addProductOption(int productId, Map<String, dynamic> optionData, String token) async {
+  Future<ProductOption> addProductOption(
+    int productId,
+    Map<String, dynamic> optionData,
+    String token,
+  ) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/products/$productId/options'),
       headers: {
@@ -218,7 +255,9 @@ class ProductApi {
       throw Exception('Producto no encontrado');
     } else {
       final errorData = json.decode(response.body);
-      throw Exception(errorData['message'] ?? 'Error al crear opción del producto');
+      throw Exception(
+        errorData['message'] ?? 'Error al crear opción del producto',
+      );
     }
   }
 }
