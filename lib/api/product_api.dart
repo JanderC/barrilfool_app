@@ -44,6 +44,44 @@ class ProductApi {
     }
   }
 
+  Future<Product> modifyProduct({
+    required int productId,
+    required Map<String, dynamic> productData,
+    required String token,
+  }) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/api/products/$productId'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: json.encode(productData),
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+
+      // Si el backend devuelve un objeto con la clave 'producto'
+      if (data is Map<String, dynamic> && data.containsKey('producto')) {
+        return Product.fromJson(data['producto']);
+      }
+      // Si el backend devuelve directamente el producto
+      else if (data is Map<String, dynamic>) {
+        return Product.fromJson(data);
+      }
+      // Si el backend devuelve una lista (fallback)
+      else if (data is List && data.isNotEmpty) {
+        return Product.fromJson(data.first);
+      } else {
+        throw Exception('Formato de respuesta inesperado del servidor');
+      }
+    } else if (response.statusCode == 404) {
+      throw Exception('Producto no encontrado');
+    } else {
+      throw Exception('Error al modificar producto: ${response.body}');
+    }
+  }
+
   // Obtener un producto por ID
   Future<Product> getProductById(int productId) async {
     final response = await http.get(

@@ -289,7 +289,7 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
         success = await productProvider.createProduct(productData, authProvider.token!);
       } else {
         // Actualizar producto existente
-        success = await productProvider.updateProduct(
+        success = await productProvider.modifyProduct(
           widget.product!.id,
           productData,
           authProvider.token!,
