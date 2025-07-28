@@ -5,6 +5,7 @@ import 'package:barrilfood_app/providers/auth_provider.dart';
 import 'package:barrilfood_app/providers/user_provider.dart'; // 👈 --- IMPORT USER_PROVIDER HERE ---
 import 'package:barrilfood_app/providers/product_provider.dart';
 import 'package:barrilfood_app/providers/category_provider.dart'; // 👈 --- IMPORT CATEGORY_PROVIDER HERE ---
+import 'package:barrilfood_app/providers/cart_provider.dart'; // 👈 --- IMPORT CART_PROVIDER HERE ---
 import 'package:barrilfood_app/screens/auth/login_screen.dart';
 import 'package:barrilfood_app/screens/auth/splash_screen.dart';
 import 'package:barrilfood_app/screens/client/client_home_screen.dart';
@@ -24,6 +25,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => EmployeeProvider()),
         ChangeNotifierProvider(create: (_) => ProductProvider()),
         ChangeNotifierProvider(create: (_) => CategoryProvider()), // 👈 --- ADD CATEGORY_PROVIDER HERE ---
+        ChangeNotifierProvider(create: (_) => CartProvider()), // 👈 --- ADD CART_PROVIDER HERE ---
       ],
       child: const MyApp(),
     ),

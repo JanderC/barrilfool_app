@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:barrilfood_app/providers/product_provider.dart';
+import 'package:barrilfood_app/providers/cart_provider.dart'; // Importar CartProvider
 import 'package:barrilfood_app/models/product.dart';
 import 'package:barrilfood_app/models/category.dart' as model;
 
@@ -28,8 +29,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ProductProvider>(
-      builder: (context, productProvider, child) {
+    return Consumer2<ProductProvider, CartProvider>(
+      builder: (context, productProvider, cartProvider, child) {
         return SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -325,12 +326,15 @@ class _ProductListScreenState extends State<ProductListScreen> {
                     itemCount: productProvider.products.length,
                     itemBuilder: (context, index) {
                       final product = productProvider.products[index];
+                      final isInCart = cartProvider.isInCart(product.id);
+                      final quantityInCart = cartProvider.getProductQuantity(product.id);
+                      
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 16),
                         child: GestureDetector(
                           onTap: () {
                             // Navegar al detalle del producto
-                            _showProductDetails(context, product);
+                            _showProductDetails(context, product, cartProvider);
                           },
                           child: Card(
                             elevation: 2,
@@ -434,7 +438,11 @@ class _ProductListScreenState extends State<ProductListScreen> {
                                                       ),
                                                     ),
                                                   )
+                                                else if (isInCart)
+                                                  // Mostrar contador si el producto está en el carrito
+                                                  _buildCartItemCounter(product, quantityInCart, cartProvider)
                                                 else
+                                                  // Mostrar botón de agregar si no está en el carrito
                                                   IconButton(
                                                     icon: const Icon(
                                                       Icons.add_circle,
@@ -442,7 +450,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                                                     ),
                                                     onPressed: () {
                                                       // Añadir al carrito
-                                                      _addToCart(context, product);
+                                                      _addToCart(context, product, cartProvider);
                                                     },
                                                   ),
                                               ],
@@ -465,6 +473,66 @@ class _ProductListScreenState extends State<ProductListScreen> {
           ),
         );
       },
+    );
+  }
+
+  // Widget del contador para items en la lista de productos
+  Widget _buildCartItemCounter(Product product, int quantity, CartProvider cartProvider) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFFF8C00), width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(
+              Icons.remove,
+              color: Color(0xFFFF8C00),
+              size: 18,
+            ),
+            onPressed: () {
+              cartProvider.updateQuantity(product.id, quantity - 1);
+              if (quantity - 1 <= 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${product.nombre} eliminado del carrito'),
+                    backgroundColor: const Color(0xFFFF8C00),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              }
+            },
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            padding: EdgeInsets.zero,
+          ),
+          Container(
+            constraints: const BoxConstraints(minWidth: 25),
+            child: Text(
+              '$quantity',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: Color(0xFFFF8C00),
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(
+              Icons.add,
+              color: Color(0xFFFF8C00),
+              size: 18,
+            ),
+            onPressed: () {
+              cartProvider.updateQuantity(product.id, quantity + 1);
+            },
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            padding: EdgeInsets.zero,
+          ),
+        ],
+      ),
     );
   }
 
@@ -562,96 +630,142 @@ class _ProductListScreenState extends State<ProductListScreen> {
   }
 
   // Función para mostrar detalles del producto
-  void _showProductDetails(BuildContext context, Product product) {
+  void _showProductDetails(BuildContext context, Product product, CartProvider cartProvider) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Imagen del producto
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 200,
-                    child: _buildProductImage(product),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                
-                // Nombre del producto
-                Text(
-                  product.nombre,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                
-                // Descripción
-                if (product.descripcion != null && product.descripcion!.isNotEmpty)
-                  Text(
-                    product.descripcion!,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                const SizedBox(height: 16),
-                
-                // Precio
-                Text(
-                  '\$${product.precio.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFFFF8C00),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                
-                // Botones
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final isInCart = cartProvider.isInCart(product.id);
+            final quantityInCart = cartProvider.getProductQuantity(product.id);
+            
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Cerrar'),
-                    ),
-                    const SizedBox(width: 8),
-                    if (product.disponible)
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          _addToCart(context, product);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFF8C00),
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text('Agregar al carrito'),
+                    // Imagen del producto
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 200,
+                        child: _buildProductImage(product),
                       ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Nombre del producto
+                    Text(
+                      product.nombre,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    
+                    // Descripción
+                    if (product.descripcion != null && product.descripcion!.isNotEmpty)
+                      Text(
+                        product.descripcion!,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    const SizedBox(height: 16),
+                    
+                    // Precio
+                    Text(
+                      '\$${product.precio.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFFF8C00),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Botones
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('Cerrar'),
+                        ),
+                        if (product.disponible)
+                          isInCart
+                              ? Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      'En carrito: $quantityInCart',
+                                      style: const TextStyle(
+                                        color: Color(0xFFFF8C00),
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        cartProvider.addToCart(product);
+                                        setState(() {}); // Actualizar el diálogo
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('${product.nombre} agregado al carrito'),
+                                            backgroundColor: const Color(0xFFFF8C00),
+                                            duration: const Duration(seconds: 2),
+                                          ),
+                                        );
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFFFF8C00),
+                                        foregroundColor: Colors.white,
+                                      ),
+                                      child: const Text('Agregar más'),
+                                    ),
+                                  ],
+                                )
+                              : ElevatedButton(
+                                  onPressed: () {
+                                    cartProvider.addToCart(product);
+                                    setState(() {}); // Actualizar el diálogo
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('${product.nombre} agregado al carrito'),
+                                        backgroundColor: const Color(0xFFFF8C00),
+                                        duration: const Duration(seconds: 2),
+                                      ),
+                                    );
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFFF8C00),
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  child: const Text('Agregar al carrito'),
+                                ),
+                      ],
+                    ),
                   ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
   }
 
   // Función para agregar al carrito
-  void _addToCart(BuildContext context, Product product) {
+  void _addToCart(BuildContext context, Product product, CartProvider cartProvider) {
+    cartProvider.addToCart(product);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('${product.nombre} agregado al carrito'),
