@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:barrilfood_app/providers/auth_provider.dart';
+import 'personal_info_screen.dart';
+import 'addresses_screen.dart';
+import 'notifications_screen.dart';
+import 'help_support_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -70,7 +74,12 @@ class ProfileScreen extends StatelessWidget {
             title: 'Información Personal',
             icon: Icons.person,
             onTap: () {
-              // Navegar a la pantalla de edición de perfil
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PersonalInfoScreen(),
+                ),
+              );
             },
           ),
           
@@ -79,7 +88,12 @@ class ProfileScreen extends StatelessWidget {
             title: 'Mis Direcciones',
             icon: Icons.location_on,
             onTap: () {
-              // Navegar a la pantalla de direcciones
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AddressesScreen(),
+                ),
+              );
             },
           ),
           
@@ -88,7 +102,12 @@ class ProfileScreen extends StatelessWidget {
             title: 'Notificaciones',
             icon: Icons.notifications,
             onTap: () {
-              // Navegar a la pantalla de notificaciones
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const NotificationsScreen(),
+                ),
+              );
             },
           ),
           
@@ -97,7 +116,12 @@ class ProfileScreen extends StatelessWidget {
             title: 'Ayuda y Soporte',
             icon: Icons.help,
             onTap: () {
-              // Navegar a la pantalla de ayuda
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const HelpSupportScreen(),
+                ),
+              );
             },
           ),
           
@@ -110,7 +134,7 @@ class ProfileScreen extends StatelessWidget {
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: () {
-                authProvider.logout();
+                _showLogoutDialog(context, authProvider);
               },
               icon: const Icon(Icons.logout),
               label: const Text('CERRAR SESIÓN'),
@@ -151,6 +175,32 @@ class ProfileScreen extends StatelessWidget {
           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
           onTap: onTap,
         ),
+      ),
+    );
+  }
+  
+  void _showLogoutDialog(BuildContext context, AuthProvider authProvider) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cerrar Sesión'),
+        content: const Text('¿Estás seguro de que deseas cerrar sesión?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              authProvider.logout();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('Cerrar Sesión', style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }
