@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart'; // Importa la función para inicializar localización
 import 'package:barrilfood_app/providers/auth_provider.dart';
+import 'package:barrilfood_app/providers/orders_provider.dart';
 import 'package:barrilfood_app/providers/user_provider.dart'; // 👈 --- IMPORT USER_PROVIDER HERE ---
 import 'package:barrilfood_app/providers/product_provider.dart';
 import 'package:barrilfood_app/providers/category_provider.dart'; // 👈 --- IMPORT CATEGORY_PROVIDER HERE ---
@@ -26,6 +27,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => ProductProvider()),
         ChangeNotifierProvider(create: (_) => CategoryProvider()), // 👈 --- ADD CATEGORY_PROVIDER HERE ---
         ChangeNotifierProvider(create: (_) => CartProvider()), // 👈 --- ADD CART_PROVIDER HERE ---
+        ChangeNotifierProvider(create: (_) => OrdersProvider()),
       ],
       child: const MyApp(),
     ),

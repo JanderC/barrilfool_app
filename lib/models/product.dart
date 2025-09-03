@@ -103,7 +103,7 @@ class Product {
 
 class ProductOption {
   final int id;
-  final int productoId;
+  final int? productoId;
   final String nombre;
   final double precioAdicional;
   final bool disponible;
