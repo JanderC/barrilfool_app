@@ -88,6 +88,7 @@ class OrdersApi {
   // Crear nuevo pedido
   Future<Order> createOrder(CreateOrderRequest orderData, String token) async {
     try {
+      print(json.encode(orderData.toJson()));
       final response = await http.post(
         Uri.parse('$baseUrl/api/orders'),
         headers: _authHeaders(token),

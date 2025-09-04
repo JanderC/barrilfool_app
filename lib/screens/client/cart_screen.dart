@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:barrilfood_app/providers/cart_provider.dart';
+import 'package:barrilfood_app/providers/orders_provider.dart';
+import 'package:barrilfood_app/providers/auth_provider.dart';
+import 'package:barrilfood_app/models/order.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -13,10 +16,12 @@ class CartScreen extends StatefulWidget {
 }
 
 class _CartScreenState extends State<CartScreen> {
+  bool _isProcessingOrder = false;
+
   @override
   Widget build(BuildContext context) {
-    return Consumer<CartProvider>(
-      builder: (context, cartProvider, child) {
+    return Consumer2<CartProvider, OrdersProvider>(
+      builder: (context, cartProvider, ordersProvider, child) {
         return Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -218,14 +223,18 @@ class _CartScreenState extends State<CartScreen> {
                     Expanded(
                       flex: 2,
                       child: OutlinedButton(
-                        onPressed: () => _showClearCartDialog(context, cartProvider),
+                        onPressed: _isProcessingOrder ? null : () => _showClearCartDialog(context, cartProvider),
                         style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Color(0xFFFF8C00)),
+                          side: BorderSide(
+                            color: _isProcessingOrder ? Colors.grey : const Color(0xFFFF8C00)
+                          ),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
-                        child: const Text(
+                        child: Text(
                           'Limpiar',
-                          style: TextStyle(color: Color(0xFFFF8C00)),
+                          style: TextStyle(
+                            color: _isProcessingOrder ? Colors.grey : const Color(0xFFFF8C00)
+                          ),
                         ),
                       ),
                     ),
@@ -234,9 +243,9 @@ class _CartScreenState extends State<CartScreen> {
                     Expanded(
                       flex: 3,
                       child: ElevatedButton(
-                        onPressed: () => _openWhatsApp(context, cartProvider),
+                        onPressed: _isProcessingOrder ? null : () => _processOrder(context, cartProvider, ordersProvider),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFF8C00),
+                          backgroundColor: _isProcessingOrder ? Colors.grey : const Color(0xFFFF8C00),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           textStyle: const TextStyle(
@@ -244,7 +253,23 @@ class _CartScreenState extends State<CartScreen> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        child: const Text('PROCEDER AL PAGO'),
+                        child: _isProcessingOrder 
+                          ? const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Text('PROCESANDO...'),
+                              ],
+                            )
+                          : const Text('PROCEDER AL PAGO'),
                       ),
                     ),
                   ],
@@ -343,7 +368,7 @@ class _CartScreenState extends State<CartScreen> {
               color: Color(0xFFFF8C00),
               size: 18,
             ),
-            onPressed: () => _updateCartItemQuantity(cartItem, cartItem.cantidad - 1, cartProvider),
+            onPressed: _isProcessingOrder ? null : () => _updateCartItemQuantity(cartItem, cartItem.cantidad - 1, cartProvider),
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
             padding: EdgeInsets.zero,
           ),
@@ -365,7 +390,7 @@ class _CartScreenState extends State<CartScreen> {
               color: Color(0xFFFF8C00),
               size: 18,
             ),
-            onPressed: () => _updateCartItemQuantity(cartItem, cartItem.cantidad + 1, cartProvider),
+            onPressed: _isProcessingOrder ? null : () => _updateCartItemQuantity(cartItem, cartItem.cantidad + 1, cartProvider),
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
             padding: EdgeInsets.zero,
           ),
@@ -427,13 +452,130 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  // Función para abrir WhatsApp con el mensaje del pedido
-  Future<void> _openWhatsApp(BuildContext context, CartProvider cartProvider) async {
+  // Función principal para procesar el pedido
+  Future<void> _processOrder(BuildContext context, CartProvider cartProvider, OrdersProvider ordersProvider) async {
+    print("Entrando a processOrder");
+    setState(() {
+      _isProcessingOrder = true;
+    });
+  final authProvider = context.read<AuthProvider>();
+    try {
+      // Crear el request del pedido
+      final orderRequest = _createOrderRequest(cartProvider);
+      
+      // TODO: Aquí necesitas obtener el token del usuario autenticado
+      // Esto podría venir de un AuthProvider o SharedPreferences
+      // Reemplaza con el token real
+      
+      // Crear el pedido en el backend
+      final Order? createdOrder = await ordersProvider.createOrder(orderRequest, authProvider.token!);
+      
+      if (createdOrder != null) {
+        // Mostrar mensaje de éxito
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('¡Pedido creado exitosamente!'),
+              backgroundColor: Color(0xFFFF8C00),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+        
+        // Abrir WhatsApp con el mensaje del pedido
+        await _openWhatsApp(context, cartProvider, createdOrder);
+        
+        // Limpiar el carrito después de crear el pedido exitosamente
+        cartProvider.clearCart();
+        
+      } else {
+        // Mostrar error si no se pudo crear el pedido
+        if (context.mounted) {
+          _showErrorMessage(context, ordersProvider.error ?? 'Error desconocido al crear el pedido');
+        }
+      }
+      
+    } catch (e) {
+      // Manejar errores de la creación del pedido
+      if (context.mounted) {
+        _showErrorMessage(context, 'Error al procesar el pedido: $e');
+      }
+    } finally {
+      setState(() {
+        _isProcessingOrder = false;
+      });
+    }
+  }
+
+  // Crear el request del pedido basado en el carrito
+  CreateOrderRequest _createOrderRequest(CartProvider cartProvider) {
+    // Crear los items del pedido usando tu modelo CreateOrderItem
+    final List<CreateOrderItem> orderItems = cartProvider.items.map((cartItem) {
+      return CreateOrderItem(
+        productoId: cartItem.product.id,
+        cantidad: cartItem.cantidad,
+        precioUnitario: cartItem.product.precio,
+        subtotal: cartItem.subtotal,
+        notas: null, // Puedes agregar notas si es necesario
+        opciones: null, // Agregar opciones si tu producto las tiene
+      );
+    }).toList();
+
+    return CreateOrderRequest(
+      direccionId: 1, // TODO: Obtener del perfil del usuario o selección
+      metodoPagoId: 1, // TODO: Obtener del método de pago seleccionado (1 = efectivo)
+      subtotal: cartProvider.subtotal,
+      envio: cartProvider.envio,
+      costoEnvio: cartProvider.envio,
+      descuento: 0.0, // Si tienes descuentos aplicados
+      impuestos: cartProvider.impuestos,
+      total: cartProvider.total,
+      metodoPago: 'efectivo', // O el método seleccionado por el usuario
+      direccionEntrega: 'Dirección del cliente', // TODO: Obtener del perfil del usuario
+      notas: 'Pedido creado desde la aplicación móvil',
+      items: orderItems,
+    );
+  }
+
+  // Mostrar mensaje de error
+  void _showErrorMessage(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 4),
+        action: SnackBarAction(
+          label: 'Reintentar',
+          textColor: Colors.white,
+          onPressed: () {
+            // El usuario puede intentar de nuevo
+          },
+        ),
+      ),
+    );
+  }
+
+  // Función para abrir WhatsApp con el mensaje del pedido (actualizada)
+  Future<void> _openWhatsApp(BuildContext context, CartProvider cartProvider, Order createdOrder) async {
     const String phoneNumber = '584160467960'; // Número con código de país (58 para Venezuela)
     
+    // Obtener información del usuario autenticado
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final String nombreCliente = authProvider.currentUser?.nombre ?? 'Cliente';
+    final String? telefonoCliente = authProvider.currentUser?.telefono;
+    final String? emailCliente = authProvider.currentUser?.email;
+    
     // Construir el mensaje con los detalles del pedido
-    String message = '¡Hola! Me gustaría realizar el siguiente pedido:\n\n';
-    message += '📋 *DETALLES DEL PEDIDO:*\n';
+    String message = '¡Hola! He realizado el siguiente pedido:\n\n';
+    message += '🆔 *NÚMERO DE PEDIDO:* ${createdOrder.id}\n';
+    message += '👤 *CLIENTE:* $nombreCliente\n';
+    if (telefonoCliente != null && telefonoCliente.isNotEmpty) {
+      message += '📱 *Teléfono:* $telefonoCliente\n';
+    }
+    if (emailCliente != null && emailCliente.isNotEmpty) {
+      message += '📧 *Email:* $emailCliente\n';
+    }
+    message += '\n📋 *DETALLES DEL PEDIDO:*\n';
     
     for (var cartItem in cartProvider.items) {
       message += '• ${cartItem.product.nombre}\n';
@@ -447,7 +589,21 @@ class _CartScreenState extends State<CartScreen> {
     message += 'Envío: \$${cartProvider.envio.toStringAsFixed(2)}\n';
     message += 'Impuestos: \$${cartProvider.impuestos.toStringAsFixed(2)}\n';
     message += '*TOTAL A PAGAR: \$${cartProvider.total.toStringAsFixed(2)}*\n\n';
-    message += '¿Pueden confirmar la disponibilidad y procesar mi pedido? ¡Gracias!';
+    
+    // Validar y formatear la fecha del pedido
+    String fechaPedido = 'No definida';
+    if (createdOrder.fechaPedido.isNotEmpty && createdOrder.fechaPedido != 'Sin fecha') {
+      try {
+        final DateTime parsedDate = DateTime.parse(createdOrder.fechaPedido);
+        fechaPedido = '${parsedDate.day}/${parsedDate.month}/${parsedDate.year} ${parsedDate.hour}:${parsedDate.minute.toString().padLeft(2, '0')}';
+      } catch (e) {
+        fechaPedido = createdOrder.fechaPedido; // Usar como está si no se puede parsear
+      }
+    }
+    
+    message += '📅 *Fecha del pedido:* $fechaPedido\n';
+    message += '📊 *Estado:* ${createdOrder.estadoNombre}\n\n';
+    message += '¿Pueden confirmar la recepción de mi pedido? ¡Gracias!';
     
     // Codificar el mensaje para URL
     final String encodedMessage = Uri.encodeComponent(message);

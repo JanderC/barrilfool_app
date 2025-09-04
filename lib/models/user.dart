@@ -6,6 +6,7 @@ class User {
   final String telefono;
   final int rolId;
   final bool activo;
+  final int? direccionId;
   final String? fechaRegistro;
   final String? ultimoAcceso;
   
@@ -17,6 +18,7 @@ class User {
     required this.telefono,
     required this.rolId,
     required this.activo,
+    this.direccionId,
     this.fechaRegistro,
     this.ultimoAcceso,
   });

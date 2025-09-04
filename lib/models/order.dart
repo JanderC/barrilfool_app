@@ -20,11 +20,11 @@ class Order {
 
   factory Order.fromJson(Map<String, dynamic> json) {
     return Order(
-      id: json['id'],
-      fechaPedido: json['fecha_pedido'],
-      estado: json['estado'],
-      total: (json['total'] as num).toDouble(),
-      cliente: json['cliente'],
+      id: (json['id'] ?? '').toString(),
+      fechaPedido: json['fecha_pedido'] ?? 'Sin fecha',
+      estado: json['estado'] ?? 'pendiente',
+      total: (json['total'] as num?)?.toDouble() ?? 0.0,
+      cliente: json['cliente'] ?? 'Sin cliente',
       repartidor: json['repartidor'],
     );
   }
@@ -106,18 +106,16 @@ class OrderDetail {
 
   factory OrderDetail.fromJson(Map<String, dynamic> json) {
     return OrderDetail(
-      id: json['id'],
-      fechaPedido: json['fecha_pedido'],
-      estado: json['estado'],
-      total: (json['total'] as num).toDouble(),
+      id: (json['id'] ?? '').toString(),
+      fechaPedido: json['fecha_pedido'] ?? 'Sin fecha',
+      estado: json['estado'] ?? 'pendiente',
+      total: (json['total'] as num?)?.toDouble() ?? 0.0,
       subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0.0,
       costoEnvio: (json['costo_envio'] as num?)?.toDouble() ?? 0.0,
       descuento: (json['descuento'] as num?)?.toDouble() ?? 0.0,
       impuestos: (json['impuestos'] as num?)?.toDouble() ?? 0.0,
       notas: json['notas'],
-      detalles: (json['detalles'] as List<dynamic>)
-          .map((item) => OrderItem.fromJson(item))
-          .toList(),
+      detalles: (json['detalles'] as List<dynamic>?)?.map((item) => OrderItem.fromJson(item)).toList() ?? [],
       cliente: json['cliente'],
       repartidor: json['repartidor'],
     );
@@ -168,11 +166,11 @@ class OrderItem {
   factory OrderItem.fromJson(Map<String, dynamic> json) {
     return OrderItem(
       productoId: json['producto_id'],
-      nombreProducto: json['nombre_producto'],
-      cantidad: json['cantidad'],
-      precioUnitario: (json['precio_unitario'] as num).toDouble(),
+      nombreProducto: json['nombre_producto'] ?? 'Producto sin nombre',
+      cantidad: (json['cantidad'] as num?)?.toInt() ?? 1,
+      precioUnitario: (json['precio_unitario'] as num?)?.toDouble() ?? 0.0,
       subtotal: (json['subtotal'] as num?)?.toDouble() ?? 
-                (json['precio_unitario'] as num).toDouble() * json['cantidad'],
+                ((json['precio_unitario'] as num?)?.toDouble() ?? 0.0) * ((json['cantidad'] as num?)?.toInt() ?? 1),
       notas: json['notas'],
       opciones: json['opciones'] != null
           ? (json['opciones'] as List<dynamic>)
@@ -209,8 +207,8 @@ class OrderItemOption {
 
   factory OrderItemOption.fromJson(Map<String, dynamic> json) {
     return OrderItemOption(
-      opcionId: json['opcion_id'],
-      precio: (json['precio'] as num).toDouble(),
+      opcionId: (json['opcion_id'] as num?)?.toInt() ?? 0,
+      precio: (json['precio'] as num?)?.toDouble() ?? 0.0,
       nombre: json['nombre'],
     );
   }
@@ -230,20 +228,26 @@ class CreateOrderRequest {
   final double subtotal;
   final double costoEnvio;
   final double descuento;
+  final double envio;
   final double impuestos;
   final double total;
+  final String metodoPago;
   final String? notas;
+  final String direccionEntrega;
   final List<CreateOrderItem> items;
 
   CreateOrderRequest({
     required this.direccionId,
     required this.metodoPagoId,
     required this.subtotal,
+    required this.envio,
     required this.costoEnvio,
     required this.descuento,
     required this.impuestos,
     required this.total,
     this.notas,
+    required this.direccionEntrega,
+    required this.metodoPago,
     required this.items,
   });
 
@@ -311,10 +315,10 @@ class OrderHistory {
 
   factory OrderHistory.fromJson(Map<String, dynamic> json) {
     return OrderHistory(
-      id: json['id'],
-      fecha: json['fecha'],
-      estado: OrderState.fromJson(json['estado']),
-      usuario: OrderUser.fromJson(json['usuario']),
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      fecha: json['fecha'] ?? 'Sin fecha',
+      estado: OrderState.fromJson(json['estado'] ?? {}),
+      usuario: OrderUser.fromJson(json['usuario'] ?? {}),
       notas: json['notas'],
     );
   }
@@ -334,9 +338,9 @@ class OrderState {
 
   factory OrderState.fromJson(Map<String, dynamic> json) {
     return OrderState(
-      id: json['id'],
-      nombre: json['nombre'],
-      color: json['color'],
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      nombre: json['nombre'] ?? 'Sin estado',
+      color: json['color'] ?? '#000000',
     );
   }
 }
@@ -353,8 +357,8 @@ class OrderUser {
 
   factory OrderUser.fromJson(Map<String, dynamic> json) {
     return OrderUser(
-      id: json['id'],
-      nombre: json['nombre'],
+      id: (json['id'] ?? '').toString(),
+      nombre: json['nombre'] ?? 'Sin nombre',
     );
   }
 }
@@ -379,12 +383,12 @@ class OrderReview {
 
   factory OrderReview.fromJson(Map<String, dynamic> json) {
     return OrderReview(
-      id: json['id'],
-      pedidoId: json['pedido_id'],
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      pedidoId: (json['pedido_id'] ?? '').toString(),
       productoId: json['producto_id'],
-      calificacion: json['calificacion'],
-      comentario: json['comentario'],
-      fecha: json['fecha'],
+      calificacion: (json['calificacion'] as num?)?.toInt() ?? 0,
+      comentario: json['comentario'] ?? '',
+      fecha: json['fecha'] ?? 'Sin fecha',
     );
   }
 

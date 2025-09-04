@@ -1,61 +1,67 @@
-  // providers/orders_provider.dart
+// providers/orders_provider.dart
 import 'package:flutter/material.dart';
 import 'package:barrilfood_app/models/order.dart';
 import 'package:barrilfood_app/api/orders_api.dart';
 
 class OrdersProvider extends ChangeNotifier {
   final OrdersApi _ordersApi = OrdersApi();
-  
+
   // Estado de la lista de pedidos
   List<Order> _orders = [];
   bool _isLoading = false;
   String? _error;
-  
+
   // Estado del pedido individual
   OrderDetail? _selectedOrder;
   bool _isLoadingOrder = false;
   String? _orderError;
-  
+
   // Estado del historial
   List<OrderHistory> _orderHistory = [];
   bool _isLoadingHistory = false;
-  
+
   // Filtros
   int? _selectedStatusFilter;
   DateTime? _startDateFilter;
   DateTime? _endDateFilter;
-  
+
   // Getters
   List<Order> get orders => _orders;
   bool get isLoading => _isLoading;
   String? get error => _error;
-  
+
   OrderDetail? get selectedOrder => _selectedOrder;
   bool get isLoadingOrder => _isLoadingOrder;
   String? get orderError => _orderError;
-  
+
   List<OrderHistory> get orderHistory => _orderHistory;
   bool get isLoadingHistory => _isLoadingHistory;
-  
+
   int? get selectedStatusFilter => _selectedStatusFilter;
   DateTime? get startDateFilter => _startDateFilter;
   DateTime? get endDateFilter => _endDateFilter;
-  
+
   // Cargar lista de pedidos
   Future<void> loadOrders(String token) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
+      print("🔍 DEBUG: Iniciando carga de pedidos...");
       _orders = await _ordersApi.getAllOrders(
         token: token,
         estadoId: _selectedStatusFilter,
         fechaInicio: _startDateFilter,
         fechaFin: _endDateFilter,
       );
+      print("✅ DEBUG: Pedidos cargados exitosamente: ${_orders.length}");
+      print(
+        "📝 DEBUG: Primeros pedidos: ${_orders.take(3).map((o) => 'ID: ${o.id}, Estado: ${o.estado}, Cliente: ${o.cliente}').toList()}",
+      );
       _error = null;
     } catch (e) {
+      print("❌ DEBUG: Error cargando pedidos: $e");
       _error = e.toString();
       _orders = [];
     } finally {
@@ -63,14 +69,14 @@ class OrdersProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
-  
+
   // Cargar pedido por ID
   Future<void> loadOrderById(String orderId, String token) async {
     _isLoadingOrder = true;
     _orderError = null;
     _selectedOrder = null;
     notifyListeners();
-    
+
     try {
       _selectedOrder = await _ordersApi.getOrderById(orderId, token);
       _orderError = null;
@@ -82,50 +88,59 @@ class OrdersProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
-  
+
   // Crear nuevo pedido
   Future<Order?> createOrder(CreateOrderRequest orderData, String token) async {
     try {
+      print("🔍 DEBUG: Creando pedido...");
+      print("📤 DEBUG: Datos del pedido: ${orderData.toJson()}");
+
       final newOrder = await _ordersApi.createOrder(orderData, token);
-      
+
+      print("✅ DEBUG: Pedido creado exitosamente");
+      print(
+        "📝 DEBUG: Orden creada - ID: ${newOrder.id}, Estado: ${newOrder.estado}, Cliente: ${newOrder.cliente}",
+      );
+
       // Agregar el nuevo pedido al inicio de la lista
       _orders.insert(0, newOrder);
       notifyListeners();
-      
+
       return newOrder;
     } catch (e) {
+      print("❌ DEBUG: Error creando pedido: $e");
       _error = e.toString();
       notifyListeners();
       return null;
     }
   }
-  
+
   // Actualizar estado del pedido
   Future<bool> updateOrderStatus(
-    String orderId, 
-    int estadoId, 
-    String token, 
-    {String? notas}
-  ) async {
+    String orderId,
+    int estadoId,
+    String token, {
+    String? notas,
+  }) async {
     try {
       final updatedOrder = await _ordersApi.updateOrderStatus(
-        orderId, 
-        estadoId, 
-        token, 
-        notas: notas
+        orderId,
+        estadoId,
+        token,
+        notas: notas,
       );
-      
+
       // Actualizar en la lista
       final index = _orders.indexWhere((order) => order.id == orderId);
       if (index != -1) {
         _orders[index] = updatedOrder;
       }
-      
+
       // Actualizar el pedido seleccionado si coincide
       if (_selectedOrder?.id == orderId) {
         _selectedOrder = await _ordersApi.getOrderById(orderId, token);
       }
-      
+
       notifyListeners();
       return true;
     } catch (e) {
@@ -134,23 +149,23 @@ class OrdersProvider extends ChangeNotifier {
       return false;
     }
   }
-  
+
   // Cancelar pedido
   Future<bool> cancelOrder(String orderId, String motivo, String token) async {
     try {
       final updatedOrder = await _ordersApi.cancelOrder(orderId, motivo, token);
-      
+
       // Actualizar en la lista
       final index = _orders.indexWhere((order) => order.id == orderId);
       if (index != -1) {
         _orders[index] = updatedOrder;
       }
-      
+
       // Actualizar el pedido seleccionado si coincide
       if (_selectedOrder?.id == orderId) {
         _selectedOrder = await _ordersApi.getOrderById(orderId, token);
       }
-      
+
       notifyListeners();
       return true;
     } catch (e) {
@@ -159,31 +174,31 @@ class OrdersProvider extends ChangeNotifier {
       return false;
     }
   }
-  
+
   // Asignar repartidor
   Future<bool> assignDelivery(
-    String orderId, 
-    String repartidorId, 
-    String token
+    String orderId,
+    String repartidorId,
+    String token,
   ) async {
     try {
       final updatedOrder = await _ordersApi.assignDelivery(
-        orderId, 
-        repartidorId, 
-        token
+        orderId,
+        repartidorId,
+        token,
       );
-      
+
       // Actualizar en la lista
       final index = _orders.indexWhere((order) => order.id == orderId);
       if (index != -1) {
         _orders[index] = updatedOrder;
       }
-      
+
       // Actualizar el pedido seleccionado si coincide
       if (_selectedOrder?.id == orderId) {
         _selectedOrder = await _ordersApi.getOrderById(orderId, token);
       }
-      
+
       notifyListeners();
       return true;
     } catch (e) {
@@ -192,12 +207,12 @@ class OrdersProvider extends ChangeNotifier {
       return false;
     }
   }
-  
+
   // Cargar historial del pedido
   Future<void> loadOrderHistory(String orderId, String token) async {
     _isLoadingHistory = true;
     notifyListeners();
-    
+
     try {
       _orderHistory = await _ordersApi.getOrderHistory(orderId, token);
     } catch (e) {
@@ -208,14 +223,14 @@ class OrdersProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
-  
+
   // Añadir valoración
   Future<bool> addOrderReview(
     String orderId,
     int productoId,
     int calificacion,
     String comentario,
-    String token
+    String token,
   ) async {
     try {
       await _ordersApi.addOrderReview(
@@ -223,9 +238,9 @@ class OrdersProvider extends ChangeNotifier {
         productoId,
         calificacion,
         comentario,
-        token
+        token,
       );
-      
+
       return true;
     } catch (e) {
       _error = e.toString();
@@ -233,20 +248,20 @@ class OrdersProvider extends ChangeNotifier {
       return false;
     }
   }
-  
+
   // Aplicar filtro de estado
   void setStatusFilter(int? statusId) {
     _selectedStatusFilter = statusId;
     notifyListeners();
   }
-  
+
   // Aplicar filtro de fecha
   void setDateFilter(DateTime? startDate, DateTime? endDate) {
     _startDateFilter = startDate;
     _endDateFilter = endDate;
     notifyListeners();
   }
-  
+
   // Limpiar filtros
   void clearFilters() {
     _selectedStatusFilter = null;
@@ -254,14 +269,14 @@ class OrdersProvider extends ChangeNotifier {
     _endDateFilter = null;
     notifyListeners();
   }
-  
+
   // Limpiar errores
   void clearError() {
     _error = null;
     _orderError = null;
     notifyListeners();
   }
-  
+
   // Limpiar pedido seleccionado
   void clearSelectedOrder() {
     _selectedOrder = null;
@@ -269,17 +284,19 @@ class OrdersProvider extends ChangeNotifier {
     _orderError = null;
     notifyListeners();
   }
-  
+
   // Refrescar lista de pedidos
   Future<void> refreshOrders(String token) async {
     await loadOrders(token);
   }
-  
+
   // Obtener pedidos por estado
   List<Order> getOrdersByStatus(String status) {
-    return _orders.where((order) => order.estado.toLowerCase() == status.toLowerCase()).toList();
+    return _orders
+        .where((order) => order.estado.toLowerCase() == status.toLowerCase())
+        .toList();
   }
-  
+
   // Obtener conteo de pedidos por estado
   Map<String, int> getOrdersCountByStatus() {
     Map<String, int> counts = {
@@ -291,61 +308,63 @@ class OrdersProvider extends ChangeNotifier {
       'entregado': 0,
       'cancelado': 0,
     };
-    
+
     for (var order in _orders) {
       final status = order.estado.toLowerCase();
       if (counts.containsKey(status)) {
         counts[status] = counts[status]! + 1;
       }
     }
-    
+
     return counts;
   }
-  
+
   // Obtener total de ventas
   double get totalSales {
     return _orders
         .where((order) => order.estado.toLowerCase() == 'entregado')
         .fold(0.0, (sum, order) => sum + order.total);
   }
-  
+
   // Obtener pedidos del día actual
   List<Order> get todayOrders {
     final today = DateTime.now();
     return _orders.where((order) {
       final orderDate = DateTime.parse(order.fechaPedido);
       return orderDate.year == today.year &&
-             orderDate.month == today.month &&
-             orderDate.day == today.day;
+          orderDate.month == today.month &&
+          orderDate.day == today.day;
     }).toList();
   }
-  
+
   // Verificar si un pedido puede ser cancelado
   bool canCancelOrder(String orderId) {
     final order = _orders.firstWhere(
       (o) => o.id == orderId,
-      orElse: () => Order(
-        id: '',
-        fechaPedido: '',
-        estado: '',
-        total: 0.0,
-        cliente: '',
-      ),
+      orElse:
+          () => Order(
+            id: '',
+            fechaPedido: '',
+            estado: '',
+            total: 0.0,
+            cliente: '',
+          ),
     );
     return order.puedeSerCancelado;
   }
-  
+
   // Verificar si un pedido puede ser valorado
   bool canReviewOrder(String orderId) {
     final order = _orders.firstWhere(
       (o) => o.id == orderId,
-      orElse: () => Order(
-        id: '',
-        fechaPedido: '',
-        estado: '',
-        total: 0.0,
-        cliente: '',
-      ),
+      orElse:
+          () => Order(
+            id: '',
+            fechaPedido: '',
+            estado: '',
+            total: 0.0,
+            cliente: '',
+          ),
     );
     return order.puedeSerValorado;
   }
