@@ -177,7 +177,7 @@ class OrdersAdminScreen extends StatelessWidget {
                                     Row(
                                       children: [
                                         Text(
-                                          'Pedido ${order['id']}',
+                                          'Pedido',
                                           style: const TextStyle(
                                             fontWeight: FontWeight.bold,
                                             fontSize: 16,

@@ -70,6 +70,29 @@ class OrdersProvider extends ChangeNotifier {
     }
   }
 
+
+
+  // Cargar pedidos pendientes con productos
+Future<void> loadPendingOrdersWithProducts(String token) async {
+  _isLoading = true;
+  _error = null;
+  notifyListeners();
+
+  try {
+    print("📍 DEBUG: Cargando pedidos pendientes con productos...");
+    _orders = await _ordersApi.getPendingOrdersWithProducts(token: token);
+    print("✅ DEBUG: Pedidos pendientes cargados: ${_orders.length}");
+    _error = null;
+  } catch (e) {
+    print("❌ DEBUG: Error cargando pedidos pendientes: $e");
+    _error = e.toString();
+    _orders = [];
+  } finally {
+    _isLoading = false;
+    notifyListeners();
+  }
+}
+
   // Cargar pedido por ID
   Future<void> loadOrderById(String orderId, String token) async {
     _isLoadingOrder = true;

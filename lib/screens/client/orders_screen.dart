@@ -24,9 +24,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
   void _loadOrders() {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final ordersProvider = Provider.of<OrdersProvider>(context, listen: false);
-    
+
     if (authProvider.token != null) {
-      ordersProvider.loadOrders(authProvider.token!);
+      ordersProvider.loadPendingOrdersWithProducts(authProvider.token!);
     }
   }
 
@@ -41,7 +41,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
             // Header con filtros
             _buildHeader(),
             const SizedBox(height: 16),
-            
+
             // Lista de pedidos
             Expanded(
               child: Consumer<OrdersProvider>(
@@ -53,15 +53,15 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       ),
                     );
                   }
-                  
+
                   if (ordersProvider.error != null) {
                     return _buildErrorState(ordersProvider.error!);
                   }
-                  
+
                   if (ordersProvider.orders.isEmpty) {
                     return _buildEmptyState();
                   }
-                  
+
                   return _buildOrdersList(ordersProvider.orders);
                 },
               ),
@@ -71,7 +71,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
       ),
     );
   }
-  
+
   Widget _buildHeader() {
     return Consumer<OrdersProvider>(
       builder: (context, ordersProvider, child) {
@@ -83,10 +83,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
               children: [
                 const Text(
                   'Mis Pedidos',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 Row(
                   children: [
@@ -94,10 +91,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       onPressed: _showFilters,
                       icon: Icon(
                         Icons.filter_list,
-                        color: ordersProvider.selectedStatusFilter != null ||
-                               ordersProvider.startDateFilter != null
-                            ? const Color(0xFFFF8C00)
-                            : Colors.grey,
+                        color:
+                            ordersProvider.selectedStatusFilter != null ||
+                                    ordersProvider.startDateFilter != null
+                                ? const Color(0xFFFF8C00)
+                                : Colors.grey,
                       ),
                     ),
                     IconButton(
@@ -116,7 +114,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
       },
     );
   }
-  
+
   Widget _buildActiveFilters(OrdersProvider provider) {
     return Container(
       margin: const EdgeInsets.only(top: 8),
@@ -136,7 +134,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
           if (provider.startDateFilter != null)
             Chip(
               label: Text(
-                '${DateFormat('dd/MM/yyyy').format(provider.startDateFilter!)} - ${provider.endDateFilter != null ? DateFormat('dd/MM/yyyy').format(provider.endDateFilter!) : 'Hoy'}'
+                '${DateFormat('dd/MM/yyyy').format(provider.startDateFilter!)} - ${provider.endDateFilter != null ? DateFormat('dd/MM/yyyy').format(provider.endDateFilter!) : 'Hoy'}',
               ),
               backgroundColor: const Color(0xFFFF8C00).withOpacity(0.2),
               deleteIcon: const Icon(Icons.close, size: 18),
@@ -149,7 +147,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
       ),
     );
   }
-  
+
   Widget _buildOrdersList(List<Order> orders) {
     return RefreshIndicator(
       onRefresh: () async => _loadOrders(),
@@ -166,13 +164,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
       ),
     );
   }
-  
+
   Widget _buildOrderCard(Order order) {
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -184,7 +180,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    'Pedido ${order.id}',
+                    'Detalles Pedido',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -196,45 +192,43 @@ class _OrdersScreenState extends State<OrdersScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            
+
             // Fecha del pedido
             Text(
               'Fecha: ${_formatDate(order.fechaPedido)}',
-              style: TextStyle(
-                color: Colors.grey.shade600,
-              ),
+              style: TextStyle(color: Colors.grey.shade600),
             ),
             const SizedBox(height: 8),
-            
-            // Cliente (si es visible)
-            if (order.cliente.isNotEmpty)
-              Text(
-                'Cliente: ${order.cliente}',
-                style: TextStyle(
-                  color: Colors.grey.shade700,
-                ),
-              ),
-            
+
             // Repartidor (si está asignado)
             if (order.repartidor != null && order.repartidor!.isNotEmpty)
               Text(
                 'Repartidor: ${order.repartidor}',
-                style: TextStyle(
-                  color: Colors.grey.shade700,
-                ),
+                style: TextStyle(color: Colors.grey.shade700),
               ),
-            
+
             const SizedBox(height: 12),
-            
+
+            if (order.productos != null && order.productos!.isNotEmpty) ...[
+              const Divider(),
+              const SizedBox(height: 8),
+              const Text(
+                'Productos:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              const SizedBox(height: 8),
+              ...order.productos!.map(
+                (producto) => _buildProductItem(producto),
+              ),
+            ],
+
             // Total del pedido
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
                   'Total:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 Text(
                   '\$${order.total.toStringAsFixed(2)}',
@@ -247,7 +241,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            
+
             // Botones de acción
             _buildOrderActions(order),
           ],
@@ -255,58 +249,41 @@ class _OrdersScreenState extends State<OrdersScreen> {
       ),
     );
   }
-  
+
   Widget _buildOrderActions(Order order) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        TextButton(
-          onPressed: () => _viewOrderDetails(order.id),
-          child: const Text(
-            'Ver Detalles',
-            style: TextStyle(
-              color: Color(0xFFFF8C00),
-            ),
-          ),
-        ),
+        
         if (order.estado.toLowerCase() == 'en_camino')
           TextButton(
             onPressed: () => _trackOrder(order.id),
             child: const Text(
               'Seguir',
-              style: TextStyle(
-                color: Color(0xFF4CAF50),
-              ),
+              style: TextStyle(color: Color(0xFF4CAF50)),
             ),
           ),
         if (order.puedeSerCancelado)
           TextButton(
             onPressed: () => _cancelOrder(order),
-            child: const Text(
-              'Cancelar',
-              style: TextStyle(
-                color: Colors.red,
-              ),
-            ),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.red)),
           ),
         if (order.puedeSerValorado)
           TextButton(
             onPressed: () => _reviewOrder(order),
             child: const Text(
               'Valorar',
-              style: TextStyle(
-                color: Color(0xFF2196F3),
-              ),
+              style: TextStyle(color: Color(0xFF2196F3)),
             ),
           ),
       ],
     );
   }
-  
+
   Widget _buildStatusBadge(String status) {
     Color color;
     String text;
-    
+
     switch (status.toLowerCase()) {
       case 'pendiente':
         color = Colors.amber;
@@ -340,7 +317,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
         color = Colors.grey;
         text = 'Desconocido';
     }
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -358,61 +335,121 @@ class _OrdersScreenState extends State<OrdersScreen> {
       ),
     );
   }
-  
-  Widget _buildEmptyState() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+
+  // Agregar método para mostrar cada producto
+  Widget _buildProductItem(OrderProduct producto) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.receipt_long,
-            size: 80,
-            color: Colors.grey,
-          ),
-          SizedBox(height: 16),
-          Text(
-            'No tienes pedidos',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey,
+          // Manejo mejorado de imágenes base64 o URLs
+          _buildProductImage(producto.imagenUrl),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${producto.cantidad}x ${producto.nombre}',
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+                if (producto.descripcion?.isNotEmpty == true)
+                  Text(
+                    producto.descripcion!,
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                if (producto.notas?.isNotEmpty == true)
+                  Text(
+                    'Notas: ${producto.notas!}',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
+              ],
             ),
           ),
-          SizedBox(height: 8),
           Text(
-            'Tus pedidos aparecerán aquí',
-            style: TextStyle(
-              color: Colors.grey,
-            ),
+            '\$${producto.subtotal.toStringAsFixed(2)}',
+            style: const TextStyle(fontWeight: FontWeight.w500),
           ),
         ],
       ),
     );
   }
-  
+
+  Widget _buildProductImage(String? imagenUrl) {
+    if (imagenUrl == null || imagenUrl.isEmpty) {
+      return _buildPlaceholderImage();
+    }
+
+    if (imagenUrl.startsWith('data:image')) {
+      // Es una imagen base64, mostrar placeholder
+      return _buildPlaceholderImage();
+    } else {
+      // Es una URL normal
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.network(
+          imagenUrl,
+          width: 50,
+          height: 50,
+          fit: BoxFit.cover,
+          errorBuilder:
+              (context, error, stackTrace) => _buildPlaceholderImage(),
+        ),
+      );
+    }
+  }
+
+  Widget _buildPlaceholderImage() {
+    return Container(
+      width: 50,
+      height: 50,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: const Icon(Icons.restaurant, color: Colors.grey),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.receipt_long, size: 80, color: Colors.grey),
+          SizedBox(height: 16),
+          Text(
+            'No tienes pedidos',
+            style: TextStyle(fontSize: 18, color: Colors.grey),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Tus pedidos aparecerán aquí',
+            style: TextStyle(color: Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildErrorState(String error) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.error_outline,
-            size: 80,
-            color: Colors.red,
-          ),
+          const Icon(Icons.error_outline, size: 80, color: Colors.red),
           const SizedBox(height: 16),
           const Text(
             'Error al cargar pedidos',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.red,
-            ),
+            style: TextStyle(fontSize: 18, color: Colors.red),
           ),
           const SizedBox(height: 8),
           Text(
             error,
-            style: const TextStyle(
-              color: Colors.grey,
-            ),
+            style: const TextStyle(color: Colors.grey),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
@@ -430,119 +467,123 @@ class _OrdersScreenState extends State<OrdersScreen> {
       ),
     );
   }
-  
+
   void _showFilters() {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => _FiltersBottomSheet(
-        onApplyFilters: (statusFilter, startDate, endDate) {
-          final provider = Provider.of<OrdersProvider>(context, listen: false);
-          provider.setStatusFilter(statusFilter);
-          provider.setDateFilter(startDate, endDate);
-          _loadOrders();
-        },
-      ),
+      builder:
+          (context) => _FiltersBottomSheet(
+            onApplyFilters: (statusFilter, startDate, endDate) {
+              final provider = Provider.of<OrdersProvider>(
+                context,
+                listen: false,
+              );
+              provider.setStatusFilter(statusFilter);
+              provider.setDateFilter(startDate, endDate);
+              _loadOrders();
+            },
+          ),
     );
   }
-  
+
   void _viewOrderDetails(String orderId) {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final ordersProvider = Provider.of<OrdersProvider>(context, listen: false);
-    
+
     // Navegar a la pantalla de detalles del pedido
-    Navigator.pushNamed(
-      context, 
-      '/order-details', 
-      arguments: orderId,
-    );
-    
+    Navigator.pushNamed(context, '/order-details', arguments: orderId);
+
     // Cargar detalles del pedido
     if (authProvider.token != null) {
       ordersProvider.loadOrderById(orderId, authProvider.token!);
     }
   }
-  
+
   void _trackOrder(String orderId) {
     // Navegar a la pantalla de seguimiento
-    Navigator.pushNamed(
-      context, 
-      '/track-order', 
-      arguments: orderId,
-    );
+    Navigator.pushNamed(context, '/track-order', arguments: orderId);
   }
-  
+
   void _cancelOrder(Order order) {
     showDialog(
       context: context,
-      builder: (context) => _CancelOrderDialog(
-        order: order,
-        onCancel: (reason) async {
-          try {
-            final authProvider = Provider.of<AuthProvider>(context, listen: false);
-            final ordersProvider = Provider.of<OrdersProvider>(context, listen: false);
-            
-            if (authProvider.token != null && authProvider.token!.isNotEmpty) {
-              final success = await ordersProvider.cancelOrder(
-                order.id, 
-                reason, 
-                authProvider.token!
-              );
-              
-              if (success && mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Pedido cancelado exitosamente'),
-                    backgroundColor: Colors.green,
-                  ),
+      builder:
+          (context) => _CancelOrderDialog(
+            order: order,
+            onCancel: (reason) async {
+              try {
+                final authProvider = Provider.of<AuthProvider>(
+                  context,
+                  listen: false,
                 );
-              } else if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(ordersProvider.error ?? 'Error al cancelar pedido'),
-                    backgroundColor: Colors.red,
-                  ),
+                final ordersProvider = Provider.of<OrdersProvider>(
+                  context,
+                  listen: false,
                 );
+
+                if (authProvider.token != null &&
+                    authProvider.token!.isNotEmpty) {
+                  final success = await ordersProvider.cancelOrder(
+                    order.id,
+                    reason,
+                    authProvider.token!,
+                  );
+
+                  if (success && mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Pedido cancelado exitosamente'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  } else if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          ordersProvider.error ?? 'Error al cancelar pedido',
+                        ),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                } else {
+                  _showAuthError();
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Error de autenticación'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               }
-            } else {
-              _showAuthError();
-            }
-          } catch (e) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Error de autenticación'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-          }
-        },
-      ),
+            },
+          ),
     );
   }
-  
+
   void _showAuthError() {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Error de autenticación. Por favor, inicia sesión nuevamente.'),
+          content: Text(
+            'Error de autenticación. Por favor, inicia sesión nuevamente.',
+          ),
           backgroundColor: Colors.red,
         ),
       );
     }
   }
-  
+
   void _reviewOrder(Order order) {
-    Navigator.pushNamed(
-      context, 
-      '/order-review', 
-      arguments: order.id,
-    );
+    Navigator.pushNamed(context, '/order-review', arguments: order.id);
   }
-  
+
   String _formatDate(String dateString) {
     try {
       final date = DateTime.parse(dateString);
@@ -551,17 +592,25 @@ class _OrdersScreenState extends State<OrdersScreen> {
       return dateString;
     }
   }
-  
+
   String _getStatusName(int statusId) {
     switch (statusId) {
-      case 1: return 'Pendiente';
-      case 2: return 'Confirmado';
-      case 3: return 'En preparación';
-      case 4: return 'Listo para entrega';
-      case 5: return 'En camino';
-      case 6: return 'Entregado';
-      case 7: return 'Cancelado';
-      default: return 'Todos';
+      case 1:
+        return 'Pendiente';
+      case 2:
+        return 'Confirmado';
+      case 3:
+        return 'En preparación';
+      case 4:
+        return 'Listo para entrega';
+      case 5:
+        return 'En camino';
+      case 6:
+        return 'Entregado';
+      case 7:
+        return 'Cancelado';
+      default:
+        return 'Todos';
     }
   }
 }
@@ -569,9 +618,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
 // Widget para el bottom sheet de filtros
 class _FiltersBottomSheet extends StatefulWidget {
   final Function(int?, DateTime?, DateTime?) onApplyFilters;
-  
+
   const _FiltersBottomSheet({required this.onApplyFilters});
-  
+
   @override
   State<_FiltersBottomSheet> createState() => _FiltersBottomSheetState();
 }
@@ -580,7 +629,7 @@ class _FiltersBottomSheetState extends State<_FiltersBottomSheet> {
   int? _selectedStatus;
   DateTime? _startDate;
   DateTime? _endDate;
-  
+
   @override
   void initState() {
     super.initState();
@@ -589,7 +638,7 @@ class _FiltersBottomSheetState extends State<_FiltersBottomSheet> {
     _startDate = provider.startDateFilter;
     _endDate = provider.endDateFilter;
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -599,13 +648,10 @@ class _FiltersBottomSheetState extends State<_FiltersBottomSheet> {
         children: [
           const Text(
             'Filtrar Pedidos',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 20),
-          
+
           // Filtro por estado
           const Align(
             alignment: Alignment.centerLeft,
@@ -628,7 +674,7 @@ class _FiltersBottomSheetState extends State<_FiltersBottomSheet> {
             ],
           ),
           const SizedBox(height: 20),
-          
+
           // Filtro por fecha
           const Align(
             alignment: Alignment.centerLeft,
@@ -645,7 +691,7 @@ class _FiltersBottomSheetState extends State<_FiltersBottomSheet> {
                   onPressed: _selectStartDate,
                   icon: const Icon(Icons.date_range),
                   label: Text(
-                    _startDate != null 
+                    _startDate != null
                         ? DateFormat('dd/MM/yyyy').format(_startDate!)
                         : 'Fecha inicial',
                   ),
@@ -657,7 +703,7 @@ class _FiltersBottomSheetState extends State<_FiltersBottomSheet> {
                   onPressed: _selectEndDate,
                   icon: const Icon(Icons.date_range),
                   label: Text(
-                    _endDate != null 
+                    _endDate != null
                         ? DateFormat('dd/MM/yyyy').format(_endDate!)
                         : 'Fecha final',
                   ),
@@ -666,7 +712,7 @@ class _FiltersBottomSheetState extends State<_FiltersBottomSheet> {
             ],
           ),
           const SizedBox(height: 20),
-          
+
           // Botones
           Row(
             children: [
@@ -695,7 +741,7 @@ class _FiltersBottomSheetState extends State<_FiltersBottomSheet> {
       ),
     );
   }
-  
+
   Widget _buildStatusChip(String label, int? value) {
     final isSelected = _selectedStatus == value;
     return FilterChip(
@@ -710,7 +756,7 @@ class _FiltersBottomSheetState extends State<_FiltersBottomSheet> {
       checkmarkColor: const Color(0xFFFF8C00),
     );
   }
-  
+
   void _selectStartDate() async {
     final date = await showDatePicker(
       context: context,
@@ -724,12 +770,13 @@ class _FiltersBottomSheetState extends State<_FiltersBottomSheet> {
       });
     }
   }
-  
+
   void _selectEndDate() async {
     final date = await showDatePicker(
       context: context,
       initialDate: _endDate ?? DateTime.now(),
-      firstDate: _startDate ?? DateTime.now().subtract(const Duration(days: 365)),
+      firstDate:
+          _startDate ?? DateTime.now().subtract(const Duration(days: 365)),
       lastDate: DateTime.now(),
     );
     if (date != null) {
@@ -738,7 +785,7 @@ class _FiltersBottomSheetState extends State<_FiltersBottomSheet> {
       });
     }
   }
-  
+
   void _clearFilters() {
     setState(() {
       _selectedStatus = null;
@@ -746,7 +793,7 @@ class _FiltersBottomSheetState extends State<_FiltersBottomSheet> {
       _endDate = null;
     });
   }
-  
+
   void _applyFilters() {
     widget.onApplyFilters(_selectedStatus, _startDate, _endDate);
     Navigator.pop(context);
@@ -757,12 +804,9 @@ class _FiltersBottomSheetState extends State<_FiltersBottomSheet> {
 class _CancelOrderDialog extends StatefulWidget {
   final Order order;
   final Function(String) onCancel;
-  
-  const _CancelOrderDialog({
-    required this.order,
-    required this.onCancel,
-  });
-  
+
+  const _CancelOrderDialog({required this.order, required this.onCancel});
+
   @override
   State<_CancelOrderDialog> createState() => _CancelOrderDialogState();
 }
@@ -770,7 +814,7 @@ class _CancelOrderDialog extends StatefulWidget {
 class _CancelOrderDialogState extends State<_CancelOrderDialog> {
   final _reasonController = TextEditingController();
   String? _selectedReason;
-  
+
   final List<String> _cancelReasons = [
     'Cambié de opinión',
     'Demora en la entrega',
@@ -778,13 +822,13 @@ class _CancelOrderDialogState extends State<_CancelOrderDialog> {
     'Error en el pedido',
     'Otro motivo',
   ];
-  
+
   @override
   void dispose() {
     _reasonController.dispose();
     super.dispose();
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -792,7 +836,9 @@ class _CancelOrderDialogState extends State<_CancelOrderDialog> {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('¿Estás seguro de que deseas cancelar el pedido ${widget.order.id}?'),
+          Text(
+            '¿Estás seguro de que deseas cancelar el pedido ${widget.order.id}?',
+          ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
             value: _selectedReason,
@@ -800,12 +846,10 @@ class _CancelOrderDialogState extends State<_CancelOrderDialog> {
               labelText: 'Motivo de cancelación',
               border: OutlineInputBorder(),
             ),
-            items: _cancelReasons.map((reason) {
-              return DropdownMenuItem(
-                value: reason,
-                child: Text(reason),
-              );
-            }).toList(),
+            items:
+                _cancelReasons.map((reason) {
+                  return DropdownMenuItem(value: reason, child: Text(reason));
+                }).toList(),
             onChanged: (value) {
               setState(() {
                 _selectedReason = value;
@@ -832,24 +876,19 @@ class _CancelOrderDialogState extends State<_CancelOrderDialog> {
         ),
         ElevatedButton(
           onPressed: _selectedReason != null ? _confirmCancel : null,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red,
-          ),
-          child: const Text(
-            'Confirmar',
-            style: TextStyle(color: Colors.white),
-          ),
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          child: const Text('Confirmar', style: TextStyle(color: Colors.white)),
         ),
       ],
     );
   }
-  
+
   void _confirmCancel() {
     String reason = _selectedReason!;
     if (_selectedReason == 'Otro motivo' && _reasonController.text.isNotEmpty) {
       reason = _reasonController.text;
     }
-    
+
     widget.onCancel(reason);
     Navigator.pop(context);
   }

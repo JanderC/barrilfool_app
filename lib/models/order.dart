@@ -8,6 +8,9 @@ class Order {
   final double total;
   final String cliente;
   final String? repartidor;
+  final List<OrderProduct>? productos; // AGREGAR ESTE CAMPO
+  final String? estadoNombre; // AGREGAR ESTE CAMPO
+  final String? metodoPagoNombre;
 
   Order({
     required this.id,
@@ -16,17 +19,61 @@ class Order {
     required this.total,
     required this.cliente,
     this.repartidor,
+    this.productos,
+    this.estadoNombre,
+    this.metodoPagoNombre,
   });
 
-  factory Order.fromJson(Map<String, dynamic> json) {
-    return Order(
-      id: (json['id'] ?? '').toString(),
-      fechaPedido: json['fecha_pedido'] ?? 'Sin fecha',
-      estado: json['estado'] ?? 'pendiente',
-      total: (json['total'] as num?)?.toDouble() ?? 0.0,
-      cliente: json['cliente'] ?? 'Sin cliente',
-      repartidor: json['repartidor'],
-    );
+  factory Order.fromJsonWithProducts(Map<String, dynamic> json) {
+  return Order(
+    id: json['id'] ?? '',
+    fechaPedido: json['fecha_pedido'] ?? '',
+    estado: _mapEstadoIdToName(json['estado_id']),
+    total: (json['total'] ?? 0.0).toDouble(),
+    cliente: json['usuario_id'] ?? '',
+    repartidor: json['repartidor_id']?.toString(),
+    metodoPagoNombre: json['metodo_pago_nombre'],
+    estadoNombre: json['estado_nombre'],
+    productos: json['productos'] != null
+        ? (json['productos'] as List)
+            .map(
+              (p) => OrderProduct(
+                productoId: p['producto_id'],
+                nombre: p['nombre'],
+                cantidad: p['cantidad'],
+                precioUnitario: (p['precio_unitario'] ?? 0.0).toDouble(),
+                subtotal: (p['subtotal'] ?? 0.0).toDouble(),
+                notas: p['notas'] ?? '',
+                imagenUrl: p['imagen_url'],
+                descripcion: p['descripcion'] ?? '',
+                opcionesSeleccionadas: p['opciones_seleccionadas'] ?? [],
+                tiempoPreparacion: p['tiempo_preparacion'] ?? 0,
+              ),
+            )
+            .toList()
+        : null,
+  );
+}
+
+  static String _mapEstadoIdToName(int? estadoId) {
+    switch (estadoId) {
+      case 1:
+        return 'pendiente';
+      case 2:
+        return 'confirmado';
+      case 3:
+        return 'en_preparacion';
+      case 4:
+        return 'listo_para_entrega';
+      case 5:
+        return 'en_camino';
+      case 6:
+        return 'entregado';
+      case 7:
+        return 'cancelado';
+      default:
+        return 'desconocido';
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -40,32 +87,10 @@ class Order {
     };
   }
 
-  // Getter para obtener el nombre del estado en español
-  String get estadoNombre {
-    switch (estado.toLowerCase()) {
-      case 'pendiente':
-        return 'Pendiente';
-      case 'confirmado':
-        return 'Confirmado';
-      case 'en_preparacion':
-        return 'En preparación';
-      case 'listo_para_entrega':
-        return 'Listo para entrega';
-      case 'en_camino':
-        return 'En camino';
-      case 'entregado':
-        return 'Entregado';
-      case 'cancelado':
-        return 'Cancelado';
-      default:
-        return 'Desconocido';
-    }
-  }
-
   // Getter para determinar si el pedido puede ser cancelado
   bool get puedeSerCancelado {
-    return estado.toLowerCase() == 'pendiente' || 
-           estado.toLowerCase() == 'confirmado';
+    return estado.toLowerCase() == 'pendiente' ||
+        estado.toLowerCase() == 'confirmado';
   }
 
   // Getter para determinar si el pedido puede ser valorado
@@ -115,7 +140,11 @@ class OrderDetail {
       descuento: (json['descuento'] as num?)?.toDouble() ?? 0.0,
       impuestos: (json['impuestos'] as num?)?.toDouble() ?? 0.0,
       notas: json['notas'],
-      detalles: (json['detalles'] as List<dynamic>?)?.map((item) => OrderItem.fromJson(item)).toList() ?? [],
+      detalles:
+          (json['detalles'] as List<dynamic>?)
+              ?.map((item) => OrderItem.fromJson(item))
+              .toList() ??
+          [],
       cliente: json['cliente'],
       repartidor: json['repartidor'],
     );
@@ -169,14 +198,17 @@ class OrderItem {
       nombreProducto: json['nombre_producto'] ?? 'Producto sin nombre',
       cantidad: (json['cantidad'] as num?)?.toInt() ?? 1,
       precioUnitario: (json['precio_unitario'] as num?)?.toDouble() ?? 0.0,
-      subtotal: (json['subtotal'] as num?)?.toDouble() ?? 
-                ((json['precio_unitario'] as num?)?.toDouble() ?? 0.0) * ((json['cantidad'] as num?)?.toInt() ?? 1),
+      subtotal:
+          (json['subtotal'] as num?)?.toDouble() ??
+          ((json['precio_unitario'] as num?)?.toDouble() ?? 0.0) *
+              ((json['cantidad'] as num?)?.toInt() ?? 1),
       notas: json['notas'],
-      opciones: json['opciones'] != null
-          ? (json['opciones'] as List<dynamic>)
-              .map((option) => OrderItemOption.fromJson(option))
-              .toList()
-          : null,
+      opciones:
+          json['opciones'] != null
+              ? (json['opciones'] as List<dynamic>)
+                  .map((option) => OrderItemOption.fromJson(option))
+                  .toList()
+              : null,
     );
   }
 
@@ -187,7 +219,7 @@ class OrderItem {
       'precio_unitario': precioUnitario,
       'subtotal': subtotal,
       if (notas != null) 'notas': notas,
-      if (opciones != null) 
+      if (opciones != null)
         'opciones': opciones!.map((option) => option.toJson()).toList(),
     };
   }
@@ -199,11 +231,7 @@ class OrderItemOption {
   final double precio;
   final String? nombre;
 
-  OrderItemOption({
-    required this.opcionId,
-    required this.precio,
-    this.nombre,
-  });
+  OrderItemOption({required this.opcionId, required this.precio, this.nombre});
 
   factory OrderItemOption.fromJson(Map<String, dynamic> json) {
     return OrderItemOption(
@@ -214,10 +242,7 @@ class OrderItemOption {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'opcion_id': opcionId,
-      'precio': precio,
-    };
+    return {'opcion_id': opcionId, 'precio': precio};
   }
 }
 
@@ -291,7 +316,7 @@ class CreateOrderItem {
       'precio_unitario': precioUnitario,
       'subtotal': subtotal,
       if (notas != null) 'notas': notas,
-      if (opciones != null) 
+      if (opciones != null)
         'opciones': opciones!.map((option) => option.toJson()).toList(),
     };
   }
@@ -330,11 +355,7 @@ class OrderState {
   final String nombre;
   final String color;
 
-  OrderState({
-    required this.id,
-    required this.nombre,
-    required this.color,
-  });
+  OrderState({required this.id, required this.nombre, required this.color});
 
   factory OrderState.fromJson(Map<String, dynamic> json) {
     return OrderState(
@@ -350,15 +371,52 @@ class OrderUser {
   final String id;
   final String nombre;
 
-  OrderUser({
-    required this.id,
-    required this.nombre,
-  });
+  OrderUser({required this.id, required this.nombre});
 
   factory OrderUser.fromJson(Map<String, dynamic> json) {
     return OrderUser(
       id: (json['id'] ?? '').toString(),
       nombre: json['nombre'] ?? 'Sin nombre',
+    );
+  }
+}
+
+class OrderProduct {
+  final int productoId;
+  final String nombre;
+  final String descripcion;
+  final int cantidad;
+  final double precioUnitario;
+  final double subtotal;
+  final String? imagenUrl;
+  final String? notas;
+  final int? tiempoPreparacion;
+  final List<dynamic> opcionesSeleccionadas;
+
+  OrderProduct({
+    required this.productoId,
+    required this.nombre,
+    required this.descripcion,
+    required this.cantidad,
+    required this.precioUnitario,
+    required this.subtotal,
+    this.imagenUrl,
+    this.notas,
+    this.tiempoPreparacion,
+    this.opcionesSeleccionadas = const [],
+  });
+
+  factory OrderProduct.fromJson(Map<String, dynamic> json) {
+    return OrderProduct(
+      productoId: json['producto_id'],
+      nombre: json['nombre'],
+      descripcion: json['descripcion'],
+      cantidad: json['cantidad'],
+      precioUnitario: (json['precio_unitario'] ?? 0).toDouble(),
+      subtotal: (json['subtotal'] ?? 0).toDouble(),
+      imagenUrl: json['imagen_url'],
+      notas: json['notas'],
+      tiempoPreparacion: json['tiempo_preparacion'],
     );
   }
 }
