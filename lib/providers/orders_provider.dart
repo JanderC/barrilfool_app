@@ -49,12 +49,13 @@ class OrdersProvider extends ChangeNotifier {
 
     try {
       print("🔍 DEBUG: Iniciando carga de pedidos...");
-      _orders = await _ordersApi.getAllOrders(
-        token: token,
-        estadoId: _selectedStatusFilter,
-        fechaInicio: _startDateFilter,
-        fechaFin: _endDateFilter,
-      );
+       _orders = await _ordersApi.getPendingOrdersWithProducts(token: token);
+      // _orders = await _ordersApi.getAllOrders(
+      //   token: token,
+      //   estadoId: _selectedStatusFilter,
+      //   fechaInicio: _startDateFilter,
+      //   fechaFin: _endDateFilter,
+      // );
       print("✅ DEBUG: Pedidos cargados exitosamente: ${_orders.length}");
       print(
         "📝 DEBUG: Primeros pedidos: ${_orders.take(3).map((o) => 'ID: ${o.id}, Estado: ${o.estado}, Cliente: ${o.cliente}').toList()}",
