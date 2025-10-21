@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:barrilfood_app/providers/orders_provider.dart';
 import 'package:barrilfood_app/providers/auth_provider.dart';
 import 'package:barrilfood_app/providers/user_provider.dart';
+import 'package:barrilfood_app/screens/order_detail_screen.dart';
 
 class EmployeeHomeScreen extends StatefulWidget {
   const EmployeeHomeScreen({super.key});
@@ -51,14 +52,12 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen>
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     
     if (authProvider.token != null) {
-      // Cargar perfil del empleado
       userProvider.loadUserProfile();
-      // Cargar todos los pedidos
       ordersProvider.loadPendingOrdersWithProducts(authProvider.token!);
     }
   }
 
-  void _refreshData() {
+  Future<void> _refreshData() async {
     if (!mounted) return;
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final ordersProvider = Provider.of<OrdersProvider>(context, listen: false);
@@ -66,7 +65,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen>
     
     if (authProvider.token != null) {
       userProvider.loadUserProfile();
-      ordersProvider.loadPendingOrdersWithProducts(authProvider.token!);
+      await ordersProvider.loadPendingOrdersWithProducts(authProvider.token!);
     }
   }
 
@@ -101,17 +100,24 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen>
     return filteredOrders;
   }
 
-  // Obtener pedidos asignados al empleado actual
+  // CORREGIDO: Obtener pedidos asignados al empleado actual
   List _getMyOrders(OrdersProvider ordersProvider, AuthProvider authProvider) {
-    final userId = authProvider.currentUser?.fullName;
-    if (userId == null) return [];
+    // DEBUG: Ver todos los pedidos y sus estados
+    print('🔍 DEBUG _getMyOrders: Total pedidos = ${ordersProvider.orders.length}');
+    for (var order in ordersProvider.orders) {
+      print('  Pedido ${order.id.substring(0, 8)}: estadoNombre="${order.estadoNombre}", estado="${order.estado}"');
+    }
     
-    return ordersProvider.orders.where((order) {
-      // Verificar si el pedido está asignado a este empleado
-      // Puedes ajustar esta lógica según cómo se asignen los pedidos
-      return order.repartidor == userId || 
-             (order.cliente == userId && authProvider.userRole == 2);
+    // Para empleados, mostramos los pedidos que están en proceso
+    final filtered = ordersProvider.orders.where((order) {
+      final status = (order.estadoNombre ?? order.estado ?? '').toLowerCase();
+      final match = status == 'en_preparacion' || status == 'listo_para_entrega';
+      print('  -> Status: "$status", Match: $match');
+      return match;
     }).toList();
+    
+    print('✅ DEBUG: Pedidos filtrados para "Mis Pedidos" = ${filtered.length}');
+    return filtered;
   }
 
   @override
@@ -123,6 +129,8 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen>
           final userName = userProvider.currentUser?['nombre'] ?? 
                           authProvider.currentUser?.fullName ?? 
                           'Empleado';
+          final name = userName.split(' ').first;
+
           final userEmail = userProvider.currentUser?['email'] ?? 
                           authProvider.currentUser?.email ?? 
                           'empleado@barrilfood.com';
@@ -152,7 +160,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen>
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Hola, $userName',
+                                  'Hola, $name',
                                   style: const TextStyle(
                                     fontSize: 26,
                                     fontWeight: FontWeight.bold,
@@ -186,9 +194,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen>
                                 ),
                                 IconButton(
                                   onPressed: () {
-                                    authProvider.logout();
-
-                                    
+                                    _showLogoutDialog(context, authProvider);
                                   },
                                   icon: const Icon(Icons.logout, color: Colors.white),
                                 ),
@@ -252,36 +258,29 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen>
 
   Widget _buildQuickStats(OrdersProvider ordersProvider, AuthProvider authProvider) {
     final myOrders = _getMyOrders(ordersProvider, authProvider);
-    final pendingCount = myOrders.where((o) => 
-      (o.estadoNombre ?? o.estado ?? '').toLowerCase() == 'confirmado').length;
+    final availableOrders = ordersProvider.orders.where((o) {
+      final status = (o.estadoNombre ?? o.estado ?? '').toLowerCase();
+      return status == 'confirmado' || status == 'pendiente';
+    }).length;
+    
     final inProgressCount = myOrders.where((o) => 
       (o.estadoNombre ?? o.estado ?? '').toLowerCase() == 'en_preparacion').length;
-    final completedToday = myOrders.where((o) {
-      final status = (o.estadoNombre ?? o.estado ?? '').toLowerCase();
-      if (status != 'listo_para_entrega' && status != 'entregado') return false;
-      try {
-        final orderDate = DateTime.parse(o.fechaPedido);
-        final now = DateTime.now();
-        return orderDate.day == now.day && 
-               orderDate.month == now.month && 
-               orderDate.year == now.year;
-      } catch (_) {
-        return false;
-      }
-    }).length;
+    
+    final readyCount = myOrders.where((o) => 
+      (o.estadoNombre ?? o.estado ?? '').toLowerCase() == 'listo_para_entrega').length;
 
     return Row(
       children: [
         Expanded(
-          child: _buildStatCard('Pendientes', pendingCount.toString(), Icons.pending_actions),
+          child: _buildStatCard('Disponibles', availableOrders.toString(), Icons.pending_actions),
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: _buildStatCard('En Proceso', inProgressCount.toString(), Icons.restaurant),
+          child: _buildStatCard('Preparando', inProgressCount.toString(), Icons.restaurant),
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: _buildStatCard('Hoy', completedToday.toString(), Icons.today),
+          child: _buildStatCard('Listos', readyCount.toString(), Icons.check_circle),
         ),
       ],
     );
@@ -320,12 +319,18 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen>
   }
 
   Widget _buildAvailableOrdersTab(OrdersProvider ordersProvider, AuthProvider authProvider) {
+    // DEBUG: Ver pedidos disponibles
+    print('🔍 DEBUG _buildAvailableOrdersTab: Total pedidos = ${ordersProvider.orders.length}');
+    
     // Filtrar pedidos confirmados que pueden ser tomados por empleados
     final availableOrders = ordersProvider.orders.where((order) {
       final status = (order.estadoNombre ?? order.estado ?? '').toLowerCase();
-      // Mostrar pedidos confirmados que aún no están en preparación
-      return status == 'confirmado' || status == 'pendiente';
+      final match = status == 'confirmado' || status == 'pendiente';
+      print('  Pedido ${order.id.substring(0, 8)}: status="$status", match=$match');
+      return match;
     }).toList();
+    
+    print('✅ DEBUG: Pedidos disponibles = ${availableOrders.length}');
 
     if (ordersProvider.isLoading) {
       return const Center(child: CircularProgressIndicator(color: Color(0xFF4CAF50)));
@@ -348,17 +353,20 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen>
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: availableOrders.length,
-      itemBuilder: (context, index) {
-        final order = availableOrders[index];
-        return _buildOrderCard(
-          order,
-          isAvailable: true,
-          onAction: () => _processOrder(order.id, ordersProvider, authProvider),
-        );
-      },
+    return RefreshIndicator(
+      onRefresh: _refreshData,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: availableOrders.length,
+        itemBuilder: (context, index) {
+          final order = availableOrders[index];
+          return _buildOrderCard(
+            order,
+            isAvailable: true,
+            onAction: () => _processOrder(order.id, ordersProvider, authProvider),
+          );
+        },
+      ),
     );
   }
 
@@ -406,8 +414,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen>
                 child: Row(
                   children: [
                     _buildFilterChip('Todos', null),
-                    _buildFilterChip('Confirmados', 'confirmado'),
-                    _buildFilterChip('En Preparación', 'en_preparacion'),
+                    _buildFilterChip('Preparando', 'en_preparacion'),
                     _buildFilterChip('Listos', 'listo_para_entrega'),
                   ].map((chip) => Padding(
                     padding: const EdgeInsets.only(right: 8),
@@ -431,7 +438,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen>
                       Text(
                         _searchQuery.isNotEmpty || _selectedStatusFilter != null
                             ? 'No se encontraron pedidos'
-                            : 'No tienes pedidos asignados',
+                            : 'No tienes pedidos en proceso',
                         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       Text(
@@ -442,17 +449,34 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen>
                     ],
                   ),
                 )
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: myOrders.length,
-                  itemBuilder: (context, index) {
-                    final order = myOrders[index];
-                    return _buildOrderCard(
-                      order,
-                      isAvailable: false,
-                      onAction: () => _updateOrderStatus(order, ordersProvider, authProvider),
-                    );
-                  },
+              : RefreshIndicator(
+                  onRefresh: _refreshData,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: myOrders.length,
+                    itemBuilder: (context, index) {
+                      final order = myOrders[index];
+                      final status = (order.estadoNombre ?? order.estado ?? '').toLowerCase();
+                      
+                      return _buildOrderCard(
+                        order,
+                        isAvailable: false,
+                        onAction: () {
+                          if (status == 'en_preparacion') {
+                            _updateOrderStatus(order, ordersProvider, authProvider);
+                          } else {
+                            // Navegar a detalles para pedidos listos u otros estados
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => OrderDetailScreen(orderId: order.id),
+                              ),
+                            );
+                          }
+                        },
+                      );
+                    },
+                  ),
                 ),
         ),
       ],
@@ -530,7 +554,6 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen>
                 ),
                 const SizedBox(height: 16),
                 if (user != null) ...[
-                  /**construimos la informacion del usuario */
                   _buildInfoRow('Nombre', user['nombre'] ?? 'N/A'),
                   _buildInfoRow('Apellido', user['apellido'] ?? 'N/A'),
                 ],
@@ -684,21 +707,18 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen>
                 onPressed: onAction,
                 icon: Icon(
                   isAvailable ? Icons.assignment_turned_in : 
-                  status == 'confirmado' ? Icons.restaurant :
                   status == 'en_preparacion' ? Icons.check_circle :
-                  Icons.info,
+                  Icons.visibility,
                   size: 18,
                 ),
                 label: Text(
                   isAvailable ? 'Procesar Pedido' :
-                  status == 'confirmado' ? 'Iniciar Preparación' :
                   status == 'en_preparacion' ? 'Marcar como Listo' :
                   'Ver Detalles',
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: 
                     isAvailable ? const Color(0xFF4CAF50) :
-                    status == 'confirmado' ? Colors.orange :
                     status == 'en_preparacion' ? Colors.green :
                     Colors.blue,
                   foregroundColor: Colors.white,
@@ -802,7 +822,6 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen>
   void _processOrder(String orderId, OrdersProvider ordersProvider, AuthProvider authProvider) async {
     if (!mounted) return;
     
-    // Cambiar el estado a "en_preparacion"
     if (authProvider.token != null) {
       final success = await ordersProvider.updateOrderStatus(
         orderId, 
@@ -820,7 +839,11 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen>
       );
       
       if (success) {
-        _tabController.animateTo(1); // Cambiar a "Mis Pedidos"
+        // Refrescar datos y cambiar a tab "Mis Pedidos"
+        await _refreshData();
+        if (mounted) {
+          _tabController.animateTo(1);
+        }
       }
     }
   }
@@ -832,17 +855,11 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen>
     int newStatusId;
     String message;
     
-    switch (status) {
-      case 'confirmado':
-        newStatusId = 3; // en_preparacion
-        message = 'Pedido en preparación';
-        break;
-      case 'en_preparacion':
-        newStatusId = 4; // listo_para_entrega
-        message = 'Pedido marcado como listo';
-        break;
-      default:
-        return; // No hacer nada para otros estados
+    if (status == 'en_preparacion') {
+      newStatusId = 4; // listo_para_entrega
+      message = 'Pedido marcado como listo';
+    } else {
+      return;
     }
     
     if (authProvider.token != null) {
@@ -860,6 +877,10 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen>
           backgroundColor: success ? Colors.green : Colors.red,
         ),
       );
+      
+      if (success) {
+        await _refreshData();
+      }
     }
   }
 

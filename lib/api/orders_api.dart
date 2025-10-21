@@ -71,8 +71,6 @@ class OrdersApi {
   }) async {
     try {
       final url = '$baseUrl/api/orders/pending-with-products';
-      print('🔍 DEBUG: URL completa: $url');
-      print('🔍 DEBUG: Token: ${token.substring(0, 20)}...');
 
       final response = await http.get(
         Uri.parse(url),
@@ -82,27 +80,18 @@ class OrdersApi {
         },
       );
 
-      print('🔍 DEBUG: Status Code: ${response.statusCode}');
-      print('🔍 DEBUG: Response Headers: ${response.headers}');
-      print('🔍 DEBUG: Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        print('🔍 DEBUG: Datos parseados: ${data.length} pedidos');
-        if (data.isNotEmpty) {
-          print('🔍 DEBUG: Primer pedido: ${data.first}');
-        }
         return data
             .map((orderJson) => Order.fromJsonWithProducts(orderJson))
             .toList();
       } else {
-        print('❌ ERROR: ${response.statusCode} - ${response.body}');
         throw Exception(
           'Error al obtener pedidos pendientes: ${response.statusCode} - ${response.body}',
         );
       }
     } catch (e) {
-      print('❌ EXCEPTION: $e');
       throw Exception('Error de conexión: $e');
     }
   }

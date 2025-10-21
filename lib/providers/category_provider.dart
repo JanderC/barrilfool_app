@@ -22,6 +22,20 @@ class CategoryProvider with ChangeNotifier {
   bool get isProductsLoading => _isProductsLoading;
   String? get error => _error;
   
+  // ✅ Método auxiliar para extraer el mensaje de error limpio
+  String _extractErrorMessage(dynamic error) {
+    String errorMessage = error.toString();
+    // Remover "Exception: " del inicio si existe
+    if (errorMessage.startsWith('Exception: ')) {
+      errorMessage = errorMessage.substring(11);
+    }
+    // Remover "Error de conexión: Exception: " si existe
+    if (errorMessage.startsWith('Error de conexión: Exception: ')) {
+      errorMessage = errorMessage.substring(30);
+    }
+    return errorMessage;
+  }
+  
   // Obtener todas las categorías
   Future<void> fetchCategories({bool showInactive = false}) async {
     _isLoading = true;
@@ -33,7 +47,7 @@ class CategoryProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     } catch (e) {
-      _error = e.toString();
+      _error = _extractErrorMessage(e);
       _isLoading = false;
       notifyListeners();
       debugPrint('Error fetching categories: $e');
@@ -45,7 +59,7 @@ class CategoryProvider with ChangeNotifier {
     try {
       return await _categoryApi.getCategoryById(categoryId);
     } catch (e) {
-      _error = e.toString();
+      _error = _extractErrorMessage(e);
       notifyListeners();
       debugPrint('Error getting category by ID: $e');
       return null;
@@ -65,7 +79,7 @@ class CategoryProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _error = e.toString();
+      _error = _extractErrorMessage(e);
       _isLoading = false;
       notifyListeners();
       debugPrint('Error creating category: $e');
@@ -89,7 +103,7 @@ class CategoryProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _error = e.toString();
+      _error = _extractErrorMessage(e);
       _isLoading = false;
       notifyListeners();
       debugPrint('Error updating category: $e');
@@ -107,14 +121,13 @@ class CategoryProvider with ChangeNotifier {
       final success = await _categoryApi.deleteCategory(categoryId, token);
       if (success) {
         _categories.removeWhere((category) => category.id == categoryId);
-        // También limpiar estadísticas de esa categoría
         _categoryStats.remove(categoryId);
       }
       _isLoading = false;
       notifyListeners();
       return success;
     } catch (e) {
-      _error = e.toString();
+      _error = _extractErrorMessage(e);
       _isLoading = false;
       notifyListeners();
       debugPrint('Error deleting category: $e');
@@ -138,7 +151,7 @@ class CategoryProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _error = e.toString();
+      _error = _extractErrorMessage(e);
       _isLoading = false;
       notifyListeners();
       debugPrint('Error deactivating category: $e');
@@ -162,7 +175,7 @@ class CategoryProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _error = e.toString();
+      _error = _extractErrorMessage(e);
       _isLoading = false;
       notifyListeners();
       debugPrint('Error activating category: $e');
@@ -180,7 +193,7 @@ class CategoryProvider with ChangeNotifier {
         return await activateCategory(categoryId, token);
       }
     } catch (e) {
-      _error = e.toString();
+      _error = _extractErrorMessage(e);
       notifyListeners();
       debugPrint('Error toggling category status: $e');
       return false;
@@ -198,7 +211,7 @@ class CategoryProvider with ChangeNotifier {
       _isProductsLoading = false;
       notifyListeners();
     } catch (e) {
-      _error = e.toString();
+      _error = _extractErrorMessage(e);
       _isProductsLoading = false;
       notifyListeners();
       debugPrint('Error fetching category products: $e');
@@ -212,7 +225,7 @@ class CategoryProvider with ChangeNotifier {
       _categoryStats[categoryId] = stats;
       notifyListeners();
     } catch (e) {
-      _error = e.toString();
+      _error = _extractErrorMessage(e);
       notifyListeners();
       debugPrint('Error fetching category statistics: $e');
     }
@@ -223,7 +236,7 @@ class CategoryProvider with ChangeNotifier {
     try {
       return await _categoryApi.searchCategories(searchTerm);
     } catch (e) {
-      _error = e.toString();
+      _error = _extractErrorMessage(e);
       notifyListeners();
       debugPrint('Error searching categories: $e');
       return [];
@@ -241,7 +254,7 @@ class CategoryProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     } catch (e) {
-      _error = e.toString();
+      _error = _extractErrorMessage(e);
       _isLoading = false;
       notifyListeners();
       debugPrint('Error fetching categories with products: $e');

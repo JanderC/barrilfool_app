@@ -100,9 +100,9 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFFFFF8E1),
-              Color(0xFFFFE0B2),
-              Color(0xFFFFCC80),
+              Color(0xFFF5F0E8), // Beige claro
+              Color(0xFFE8DCC4), // Beige medio del logo
+              Color(0xFFD4C4A8), // Beige más oscuro
             ],
           ),
         ),
@@ -116,7 +116,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                   position: _slideAnimation,
                   child: Card(
                     elevation: 20,
-                    shadowColor: Colors.orange.withOpacity(0.3),
+                    shadowColor: Colors.black.withOpacity(0.3),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(24),
                     ),
@@ -124,14 +124,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                       padding: const EdgeInsets.all(32.0),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(24),
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.white,
-                            Colors.white.withOpacity(0.95),
-                          ],
-                        ),
+                        color: Colors.white,
                       ),
                       child: Form(
                         key: _formKey,
@@ -139,7 +132,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            // Logo animado
+                            // Logo de Barrilfood
                             TweenAnimationBuilder<double>(
                               tween: Tween<double>(begin: 0, end: 1),
                               duration: const Duration(milliseconds: 800),
@@ -147,80 +140,91 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                 return Transform.scale(
                                   scale: value,
                                   child: Container(
-                                    padding: const EdgeInsets.all(20),
+                                    height: 150,
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          const Color(0xFFFF8C00),
-                                          const Color(0xFFFF8C00).withOpacity(0.8),
-                                        ],
-                                      ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: const Color(0xFFFF8C00).withOpacity(0.3),
+                                          color: Colors.black.withOpacity(0.2),
                                           blurRadius: 20,
                                           spreadRadius: 5,
                                         ),
                                       ],
                                     ),
-                                    child: const Icon(
-                                      Icons.restaurant,
-                                      size: 50,
-                                      color: Colors.white,
+                                    child: ClipOval(
+                                      child: Image.network(
+                                        'https://www.pangeatech.com.uy:85/imagenes/image.png',
+                                        fit: BoxFit.cover,
+                                        loadingBuilder: (context, child, loadingProgress) {
+                                          if (loadingProgress == null) return child;
+                                          return Center(
+                                            child: CircularProgressIndicator(
+                                              value: loadingProgress.expectedTotalBytes != null
+                                                  ? loadingProgress.cumulativeBytesLoaded /
+                                                      loadingProgress.expectedTotalBytes!
+                                                  : null,
+                                              color: const Color(0xFF2C2416),
+                                            ),
+                                          );
+                                        },
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return const Icon(
+                                            Icons.restaurant,
+                                            size: 50,
+                                            color: Color(0xFF2C2416),
+                                          );
+                                        },
+                                      ),
                                     ),
                                   ),
                                 );
                               },
                             ),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 32),
                             
-                            // Título con efecto shimmer
-                            ShaderMask(
-                              shaderCallback: (bounds) => const LinearGradient(
-                                colors: [
-                                  Color(0xFFFF8C00),
-                                  Color(0xFFFF6F00),
-                                  Color(0xFFFF8C00),
-                                ],
-                              ).createShader(bounds),
-                              child: const Text(
-                                'Barrilfood',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 36,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  letterSpacing: 2,
-                                ),
+                            // Título
+                            const Text(
+                              'BARRILFOOD',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2C2416), // Negro/marrón oscuro del logo
+                                letterSpacing: 3,
                               ),
                             ),
                             const SizedBox(height: 8),
                             
                             // Subtítulo
                             Text(
-                              'Inicia sesión para continuar',
+                              'El Arte del Ahumado',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 16,
-                                color: Colors.grey[600],
+                                color: Colors.grey[700],
                                 fontWeight: FontWeight.w500,
+                                letterSpacing: 1,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            
+                            Text(
+                              'Inicia sesión para continuar',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[600],
                               ),
                             ),
                             const SizedBox(height: 32),
                             
-                            // Mensaje de error mejorado
+                            // Mensaje de error
                             if (_errorMessage.isNotEmpty)
                               AnimatedContainer(
                                 duration: const Duration(milliseconds: 300),
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Colors.red.shade50,
-                                      Colors.red.shade100,
-                                    ],
-                                  ),
+                                  color: Colors.red.shade50,
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
                                     color: Colors.red.shade200,
@@ -249,7 +253,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                               ),
                             if (_errorMessage.isNotEmpty) const SizedBox(height: 20),
                             
-                            // Campo de email mejorado
+                            // Campo de email
                             Container(
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(12),
@@ -268,7 +272,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                   labelText: 'Correo electrónico',
                                   prefixIcon: const Icon(
                                     Icons.email_outlined,
-                                    color: Color(0xFFFF8C00),
+                                    color: Color(0xFF2C2416),
                                   ),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
@@ -277,21 +281,21 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
                                     borderSide: BorderSide(
-                                      color: Colors.grey.shade300,
-                                      width: 1,
+                                      color: const Color(0xFFE8DCC4),
+                                      width: 2,
                                     ),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
                                     borderSide: const BorderSide(
-                                      color: Color(0xFFFF8C00),
+                                      color: Color(0xFF2C2416),
                                       width: 2,
                                     ),
                                   ),
                                   filled: true,
-                                  fillColor: Colors.grey.shade50,
+                                  fillColor: const Color(0xFFFAF8F5),
                                   labelStyle: const TextStyle(
-                                    color: Color(0xFFFF8C00),
+                                    color: Color(0xFF2C2416),
                                   ),
                                 ),
                                 validator: (value) {
@@ -307,7 +311,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                             ),
                             const SizedBox(height: 20),
                             
-                            // Campo de contraseña mejorado
+                            // Campo de contraseña
                             Container(
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(12),
@@ -326,12 +330,12 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                   labelText: 'Contraseña',
                                   prefixIcon: const Icon(
                                     Icons.lock_outline,
-                                    color: Color(0xFFFF8C00),
+                                    color: Color(0xFF2C2416),
                                   ),
                                   suffixIcon: IconButton(
                                     icon: Icon(
                                       _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                                      color: const Color(0xFFFF8C00),
+                                      color: const Color(0xFF2C2416),
                                     ),
                                     onPressed: () {
                                       setState(() {
@@ -346,21 +350,21 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
                                     borderSide: BorderSide(
-                                      color: Colors.grey.shade300,
-                                      width: 1,
+                                      color: const Color(0xFFE8DCC4),
+                                      width: 2,
                                     ),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
                                     borderSide: const BorderSide(
-                                      color: Color(0xFFFF8C00),
+                                      color: Color(0xFF2C2416),
                                       width: 2,
                                     ),
                                   ),
                                   filled: true,
-                                  fillColor: Colors.grey.shade50,
+                                  fillColor: const Color(0xFFFAF8F5),
                                   labelStyle: const TextStyle(
-                                    color: Color(0xFFFF8C00),
+                                    color: Color(0xFF2C2416),
                                   ),
                                 ),
                                 validator: (value) {
@@ -373,19 +377,19 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                             ),
                             const SizedBox(height: 32),
                             
-                            // Botón de inicio de sesión mejorado
+                            // Botón de inicio de sesión
                             Container(
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(12),
                                 gradient: const LinearGradient(
                                   colors: [
-                                    Color(0xFFFF8C00),
-                                    Color(0xFFFF6F00),
+                                    Color(0xFF2C2416), // Negro del logo
+                                    Color(0xFF3D3020), // Marrón oscuro
                                   ],
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFFFF8C00).withOpacity(0.4),
+                                    color: Colors.black.withOpacity(0.3),
                                     blurRadius: 15,
                                     offset: const Offset(0, 6),
                                   ),
@@ -396,7 +400,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.transparent,
                                   shadowColor: Colors.transparent,
-                                  foregroundColor: Colors.white,
+                                  foregroundColor: const Color(0xFFE8DCC4),
                                   padding: const EdgeInsets.symmetric(vertical: 18),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
@@ -404,7 +408,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                   textStyle: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
-                                    letterSpacing: 1,
+                                    letterSpacing: 1.5,
                                   ),
                                 ),
                                 child: _isLoading
@@ -413,7 +417,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                         width: 24,
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2.5,
-                                          color: Colors.white,
+                                          color: Color(0xFFE8DCC4),
                                         ),
                                       )
                                     : const Text('INICIAR SESIÓN'),
@@ -421,7 +425,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                             ),
                             const SizedBox(height: 24),
                             
-                            // Enlace para registrarse mejorado
+                            // Enlace para registrarse
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
@@ -453,22 +457,17 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                   },
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
+                                      horizontal: 12,
+                                      vertical: 6,
                                     ),
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(8),
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          const Color(0xFFFF8C00).withOpacity(0.1),
-                                          const Color(0xFFFF8C00).withOpacity(0.05),
-                                        ],
-                                      ),
+                                      color: const Color(0xFFE8DCC4).withOpacity(0.3),
                                     ),
                                     child: const Text(
                                       'Regístrate',
                                       style: TextStyle(
-                                        color: Color(0xFFFF8C00),
+                                        color: Color(0xFF2C2416),
                                         fontWeight: FontWeight.bold,
                                         fontSize: 15,
                                       ),

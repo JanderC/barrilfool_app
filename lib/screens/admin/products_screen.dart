@@ -1147,9 +1147,20 @@ class _ProductsScreenState extends State<ProductsScreen>
 
     final categoryData = {'nombre': categoryName, 'activo': true};
 
-    // Nota: Necesitarás obtener el token del usuario autenticado
-    // const token = 'your_auth_token_here';
-    const token = ''; // Por ahora vacío hasta que implementes autenticación
+    // ✅ OBTENER EL TOKEN DEL USUARIO AUTENTICADO
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    String? token = authProvider.token;
+
+    // Verificar que el token no sea nulo
+    if (token == null || token.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Debes iniciar sesión para crear categorías'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     final success = await categoryProvider.createCategory(categoryData, token);
 
@@ -1182,7 +1193,6 @@ class _ProductsScreenState extends State<ProductsScreen>
       listen: false,
     );
 
-    // Verificar si la categoría ya existe (excluyendo la actual)
     if (categoryProvider.categoryExists(categoryName, excludeId: categoryId)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -1195,8 +1205,19 @@ class _ProductsScreenState extends State<ProductsScreen>
 
     final categoryData = {'nombre': categoryName};
 
-    // Nota: Necesitarás obtener el token del usuario autenticado
-    const token = '';
+    // ✅ OBTENER TOKEN
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    String? token = authProvider.token;
+
+    if (token == null || token.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Debes iniciar sesión para actualizar categorías'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     final success = await categoryProvider.updateCategory(
       categoryId,
@@ -1229,8 +1250,19 @@ class _ProductsScreenState extends State<ProductsScreen>
       listen: false,
     );
 
-    // Nota: Necesitarás obtener el token del usuario autenticado
-    const token = '';
+    // ✅ OBTENER TOKEN
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    String? token = authProvider.token;
+
+    if (token == null || token.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Debes iniciar sesión para cambiar el estado'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     final success = await categoryProvider.toggleCategoryStatus(
       category.id,
